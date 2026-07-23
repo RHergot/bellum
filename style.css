@@ -1,0 +1,106 @@
+/* ============================================================
+   Bellum — Styles responsive
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 12px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1 {
+  font-size: 1.6rem;
+  background: linear-gradient(90deg, #f85149, #f0883e, #d29922);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle { font-size: 0.8rem; color: #8b949e; margin-bottom: 12px; }
+
+/* Layout */
+.layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 780px;
+  width: 100%;
+}
+
+.board-area { flex-shrink: 0; }
+
+canvas {
+  border: 2px solid #30363d;
+  border-radius: 6px;
+  display: block;
+  touch-action: manipulation;
+  cursor: pointer;
+}
+
+/* Panel */
+.panel {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 14px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel h2 { font-size: 0.75rem; color: #8b949e; font-weight: 600; }
+
+/* Mode switch */
+.mode-switch { display: flex; gap: 4px; }
+.mode-btn {
+  flex: 1; padding: 7px 2px; font-size: 0.9rem;
+  border: 1px solid #30363d; background: #21262d; border-radius: 4px; cursor: pointer;
+}
+.mode-btn.active { background: #1f6feb; border-color: #58a6ff; }
+
+/* Phase & turn */
+#phaseDisplay { font-size: 0.8rem; color: #f0883e; min-height: 2em; }
+#turnDisplay   { font-size: 0.75rem; color: #8b949e; min-height: 1em; }
+
+/* Buttons */
+.btn {
+  background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+  padding: 7px 10px; border-radius: 5px; cursor: pointer;
+  font-size: 0.72rem; font-weight: 600; text-align: center; width: 100%;
+}
+.btn:hover { background: #30363d; }
+.btn.primary { background: #238636; border-color: #2ea043; color: #fff; }
+.btn.primary:hover { background: #2ea043; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; justify-content: center; align-items: center; }
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+  padding: 20px; max-width: 500px; max-height: 85vh; overflow-y: auto; margin: 12px;
+}
+.modal h2 { color: #58a6ff; margin-bottom: 8px; font-size: 1rem; }
+.modal h3 { color: #bc8cff; margin: 10px 0 4px; font-size: 0.8rem; }
+.modal p, .modal li { font-size: 0.72rem; line-height: 1.4; color: #8b949e; }
+.modal table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.65rem; }
+.modal th { text-align: left; color: #c9d1d9; padding: 3px 6px; border-bottom: 1px solid #30363d; }
+.modal td { padding: 3px 6px; border-bottom: 1px solid #21262d; color: #8b949e; }
+.modal-close { float: right; background: none; border: none; color: #8b949e; font-size: 1.2rem; cursor: pointer; }
+.modal-close:hover { color: #f85149; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .layout { flex-direction: column; align-items: center; }
+  .panel { width: 100%; max-width: 380px; }
+}

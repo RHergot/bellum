@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#0d1117">
+  <title>Bellum — Guerre des Armées</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>⚔️ Bellum</h1>
+  <p class="subtitle">Romains · Napoléon — Morne plaine de Waterloo</p>
+
+  <div class="layout">
+    <!-- Plateau -->
+    <div class="board-area">
+      <canvas id="board"></canvas>
+    </div>
+
+    <!-- Panneau -->
+    <div class="panel">
+      <h2>🎨 Affichage</h2>
+      <div class="mode-switch" id="modeSwitch">
+        <button class="mode-btn active" data-mode="numbers">🔢</button>
+        <button class="mode-btn" data-mode="colors">🎨</button>
+        <button class="mode-btn" data-mode="lissajous">📡</button>
+      </div>
+
+      <h2>📊 Statut</h2>
+      <div id="phaseDisplay">Phase : Placement — ⚔️ Romains</div>
+      <div id="turnDisplay"></div>
+
+      <button class="btn primary" id="btnReady">✅ Prêt — Phase bataille</button>
+      <button class="btn" id="btnReset">🔄 Recommencer</button>
+      <button class="btn" id="btnRules">📖 Règles</button>
+    </div>
+  </div>
+
+  <!-- Modale -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <button class="modal-close" id="modalClose">✕</button>
+      <h2>📖 Bellum — Règles</h2>
+      <h3>Principe</h3>
+      <p>Chaque joueur dispose de <strong>40 pièces</strong> (10 rangs) placées face cachée. Les deux armées s'affrontent sur un champ de bataille 10×10.</p>
+
+      <h3>Hiérarchie (du plus fort au plus faible)</h3>
+      <table>
+        <tr><th>Rang</th><th>⚔️ Romain</th><th>🎩 Napoléon</th><th>Qté</th></tr>
+        <tr><td>10</td><td>Legatus</td><td>Maréchal</td><td>×1</td></tr>
+        <tr><td>9</td><td>Tribunus Lat.</td><td>Général Div.</td><td>×1</td></tr>
+        <tr><td>8</td><td>Praefectus</td><td>Général Brg.</td><td>×2</td></tr>
+        <tr><td>7</td><td>Tribunus Ang.</td><td>Colonel</td><td>×3</td></tr>
+        <tr><td>6</td><td>Primus Pilus</td><td>Chef Bat.</td><td>×4</td></tr>
+        <tr><td>5</td><td>Centurio</td><td>Capitaine</td><td>×4</td></tr>
+        <tr><td>4</td><td>Optio</td><td>Lieutenant</td><td>×4</td></tr>
+        <tr><td>3</td><td>Aquilifer</td><td>Sapeur</td><td>×5</td></tr>
+        <tr><td>2</td><td>Speculator</td><td>Éclaireur</td><td>×8</td></tr>
+        <tr><td>1</td><td>Explorator</td><td>Agent</td><td>×1</td></tr>
+        <tr><td>0</td><td>Vexillum</td><td>Aigle</td><td>×1</td></tr>
+        <tr><td>-1</td><td>Stimulus</td><td>Mine</td><td>×6</td></tr>
+      </table>
+
+      <h3>Résolution des combats</h3>
+      <p>Le grade le plus élevé gagne. Égalité → les deux pièces sont détruites.<br>
+         <strong>Exception :</strong> l'Espion (rang 1) tue le Commandant suprême (rang 10) s'il attaque en premier.<br>
+         <strong>Mines :</strong> immobiles, détruisent toute pièce sauf le démineur (rang 3).</p>
+
+      <h3>Objectif</h3>
+      <p>Capturer le drapeau adverse ou éliminer toutes les pièces mobiles ennemies.</p>
+    </div>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
