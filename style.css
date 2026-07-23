@@ -1,5 +1,6 @@
 /* ============================================================
-   Bellum — Styles responsive
+   Bellum — Styles (v2 with sidebars)
+   Layout: sidebar gauche | canvas | sidebar droite
    ============================================================ */
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,28 +13,26 @@ body {
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  padding: 12px;
+  padding: 8px;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 h1 {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   background: linear-gradient(90deg, #f85149, #f0883e, #d29922);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+.subtitle { font-size: 0.72rem; color: #8b949e; margin-bottom: 8px; }
 
-.subtitle { font-size: 0.8rem; color: #8b949e; margin-bottom: 12px; }
-
-/* Layout */
+/* ── 3-COLUMN LAYOUT ── */
 .layout {
   display: flex;
-  gap: 16px;
+  gap: 8px;
   align-items: flex-start;
-  flex-wrap: wrap;
   justify-content: center;
-  max-width: 780px;
+  max-width: 1100px;
   width: 100%;
 }
 
@@ -47,60 +46,184 @@ canvas {
   cursor: pointer;
 }
 
-/* Panel */
-.panel {
+/* ── SIDEBARS ── */
+.sidebar {
+  position: relative;
+  min-width: 160px;
+  max-width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Toggle button (visible when sidebar is collapsed) */
+.toggle-btn {
+  width: 44px;
+  height: 44px;
+  font-size: 1.3rem;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #c9d1d9;
+  margin-bottom: 4px;
+  align-self: center;
+  transition: all 0.15s;
+  z-index: 5;
+}
+.toggle-btn:hover { background: #30363d; }
+#toggleLeft  { background: rgba(196,30,58,0.15); }
+#toggleRight { background: rgba(27,58,92,0.15); }
+
+/* Sidebar content */
+.sidebar-content {
+  display: none;
   background: #161b22;
   border: 1px solid #30363d;
   border-radius: 8px;
-  padding: 14px;
-  width: 220px;
-  display: flex;
+  padding: 10px;
   flex-direction: column;
   gap: 8px;
 }
+.sidebar-content.open { display: flex; }
 
-.panel h2 { font-size: 0.75rem; color: #8b949e; font-weight: 600; }
+.sidebar-content h3 {
+  font-size: 0.85rem;
+  text-align: center;
+}
+#sidebarLeft .sidebar-content h3  { color: #f0883e; }
+#sidebarRight .sidebar-content h3 { color: #58a6ff; }
 
-/* Mode switch */
-.mode-switch { display: flex; gap: 4px; }
+.sidebar-content h4 {
+  font-size: 0.65rem;
+  color: #8b949e;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+/* ── REFERENCE TABLE ── */
+.ref-table {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ref-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  background: #0d1117;
+  border-radius: 4px;
+  font-size: 0.6rem;
+}
+
+.ref-rank {
+  width: 18px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+}
+.ref-rank.high  { color: #FFD700; }
+.ref-rank.med   { color: #f0883e; }
+.ref-rank.low   { color: #8b949e; }
+
+.ref-name {
+  flex: 1;
+  font-size: 0.62rem;
+  color: #c9d1d9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-count {
+  width: 16px;
+  text-align: center;
+  color: #8b949e;
+  font-size: 0.55rem;
+}
+
+.ref-sample {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ── CAPTURED GRID ── */
+.captured-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 2px;
+}
+
+.captured-cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  font-size: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: bold;
+  min-width: 14px;
+}
+.captured-cell.taken  { background: #238636; }  /* vert */
+.captured-cell.active { background: #c41e3a; }  /* rouge */
+.captured-cell.lost   { background: #6e2d35; }  /* rouge foncé = a perdu sa propre pièce */
+
+/* ── MODE SWITCH ── */
+.mode-switch { display: flex; gap: 3px; }
 .mode-btn {
-  flex: 1; padding: 7px 2px; font-size: 0.9rem;
+  flex: 1; padding: 5px 2px; font-size: 0.8rem;
   border: 1px solid #30363d; background: #21262d; border-radius: 4px; cursor: pointer;
 }
 .mode-btn.active { background: #1f6feb; border-color: #58a6ff; }
 
-/* Phase & turn */
-#phaseDisplay { font-size: 0.8rem; color: #f0883e; min-height: 2em; }
-#turnDisplay   { font-size: 0.75rem; color: #8b949e; min-height: 1em; }
+/* ── STATUS ── */
+#phaseDisplay { font-size: 0.7rem; color: #f0883e; min-height: 1.5em; }
+#turnDisplay   { font-size: 0.65rem; color: #8b949e; min-height: 1em; }
 
-/* Buttons */
+/* ── BUTTONS ── */
 .btn {
   background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
-  padding: 7px 10px; border-radius: 5px; cursor: pointer;
-  font-size: 0.72rem; font-weight: 600; text-align: center; width: 100%;
+  padding: 5px 8px; border-radius: 4px; cursor: pointer;
+  font-size: 0.65rem; font-weight: 600; text-align: center; width: 100%;
 }
 .btn:hover { background: #30363d; }
 .btn.primary { background: #238636; border-color: #2ea043; color: #fff; }
 .btn.primary:hover { background: #2ea043; }
+
+/* ── COLLAPSED STATE STYLES ── */
 
 /* Modal */
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; justify-content: center; align-items: center; }
 .modal-overlay.show { display: flex; }
 .modal {
   background: #161b22; border: 1px solid #30363d; border-radius: 12px;
-  padding: 20px; max-width: 500px; max-height: 85vh; overflow-y: auto; margin: 12px;
+  padding: 18px; max-width: 480px; max-height: 85vh; overflow-y: auto; margin: 10px;
 }
-.modal h2 { color: #58a6ff; margin-bottom: 8px; font-size: 1rem; }
-.modal h3 { color: #bc8cff; margin: 10px 0 4px; font-size: 0.8rem; }
-.modal p, .modal li { font-size: 0.72rem; line-height: 1.4; color: #8b949e; }
-.modal table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 0.65rem; }
-.modal th { text-align: left; color: #c9d1d9; padding: 3px 6px; border-bottom: 1px solid #30363d; }
-.modal td { padding: 3px 6px; border-bottom: 1px solid #21262d; color: #8b949e; }
-.modal-close { float: right; background: none; border: none; color: #8b949e; font-size: 1.2rem; cursor: pointer; }
+.modal h2 { color: #58a6ff; margin-bottom: 6px; font-size: 0.95rem; }
+.modal h3 { color: #bc8cff; margin: 8px 0 4px; font-size: 0.75rem; }
+.modal p, .modal li { font-size: 0.68rem; line-height: 1.4; color: #8b949e; }
+.modal table { width: 100%; border-collapse: collapse; margin: 5px 0; font-size: 0.62rem; }
+.modal th { text-align: left; color: #c9d1d9; padding: 2px 5px; border-bottom: 1px solid #30363d; }
+.modal td { padding: 2px 5px; border-bottom: 1px solid #21262d; color: #8b949e; }
+.modal-close { float: right; background: none; border: none; color: #8b949e; font-size: 1.1rem; cursor: pointer; }
 .modal-close:hover { color: #f85149; }
 
-/* Responsive */
-@media (max-width: 640px) {
+/* ── RESPONSIVE ── */
+@media (max-width: 1000px) {
+  .sidebar { min-width: 0; max-width: 140px; }
+  .sidebar-content { padding: 6px; gap: 5px; }
+  .ref-name { font-size: 0.55rem; }
+}
+
+@media (max-width: 780px) {
   .layout { flex-direction: column; align-items: center; }
-  .panel { width: 100%; max-width: 380px; }
+  .sidebar { flex-direction: row; max-width: 100%; min-width: 100%; justify-content: center; gap: 8px; }
+  .sidebar-content { flex-direction: row; flex-wrap: wrap; }
+  .captured-grid { grid-template-columns: repeat(10, 1fr); max-width: 200px; }
 }

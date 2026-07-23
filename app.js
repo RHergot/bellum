@@ -2,6 +2,7 @@
  * ============================================================
  *  Bellum — Jeu de stratégie à pièces cachées (app.js)
  *  Romains ⚔️ vs Napoléon 🎩 — Plateau 10×10
+ *  v2 : Sidebars de référence + grille de pièces prises
  * ============================================================
  */
 
@@ -12,7 +13,7 @@ const BOARD_SIZE = 10;
 let CELL = 52;
 const GAP = 2;
 const PADDING = 8;
-const PLAYER_ROWS = 4; // Chaque joueur occupe ses 4 premières lignes
+const PLAYER_ROWS = 4;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -21,15 +22,6 @@ const ctx = canvas.getContext('2d');
 // ARMIES
 // ============================================================
 
-/**
- * Chaque pièce = { key, rank, name, count, emoji }
- * rank 10 = le plus fort, rank -1 = mine, rank 0 = drapeau
- * Règle : le grade le plus élevé gagne. Égalité = destruction mutuelle.
- * Exception : Spy (1) tue Marshal (10) si Spy attaque.
- * Exception : Miner (3) désamorce Bomb (-1).
- * Flag (0) et Bomb (-1) sont immobiles.
- * Scout (2) peut se déplacer de plusieurs cases en ligne droite.
- */
 const ROMANS = {
   name: 'Romains', color: '#C41E3A', accent: '#FFD700',
   pieces: [
@@ -66,50 +58,36 @@ const NAPOLEON = {
   ]
 };
 
-// ============================================================
-// PIECE UTILS
-// ============================================================
+const TILE_COLORS = {
+  marshal:'#FF0000', general:'#FF4500', colonel:'#FF8C00', major:'#FFD700',
+  captain:'#32CD32', lieutenant:'#228B22', sergeant:'#4682B4',
+  miner:'#8A2BE2', scout:'#00CED1', spy:'#FF69B4', flag:'#FFFFFF', bomb:'#333333'
+};
 
-/** Lookup rank by key */
 function getRank(army, pieceKey) {
   const p = army.pieces.find(p => p.key === pieceKey);
   return p ? p.rank : 0;
 }
 
-/** Get full piece info */
 function getPiece(army, pieceKey) {
   return army.pieces.find(p => p.key === pieceKey) || null;
 }
 
-/** Get army by player (1 or 2) */
 function getArmy(player) { return player === 1 ? ROMANS : NAPOLEON; }
 
-/** Is the piece mobile? (not flag, not bomb) */
-function isMobile(pieceKey) {
-  return pieceKey !== 'flag' && pieceKey !== 'bomb';
-}
+function isMobile(pieceKey) { return pieceKey !== 'flag' && pieceKey !== 'bomb'; }
 
 // ============================================================
 // STATE
 // ============================================================
 
-/**
- * Cell = {
- *   player: 0 | 1 | 2,   // 0 = vide
- *   piece:  string,       // key de la pièce
- *   visible: bool,        // révélée à l'adversaire (combat ou position connue)
- * }
- * board[row][col]
- */
-let board = [];
-let currentPlayer = 1;           // 1: Romans, 2: Napoléon
-let phase = 'placement';         // 'placement' | 'battle'
-let selectedCell = null;         // { row, col }
+let board = [];           // board[row][col] = { player, piece, visible }
+let currentPlayer = 1;
+let phase = 'placement';  // 'placement' | 'battle'
+let selectedCell = null;
 let displayMode = 'numbers';
 let gameOver = false;
 let winner = null;
-
-/** Compteur de pièces restantes à placer */
 let remainingToPlace = {};
 
 // ============================================================
@@ -130,17 +108,12 @@ function initBoard() {
   gameOver = false;
   winner = null;
 
-  // Reset remaining pieces for both players (for placement)
   [ROMANS, NAPOLEON].forEach(army => {
-    const key = army.name;
-    remainingToPlace[key] = [];
+    remainingToPlace[army.name] = [];
     army.pieces.forEach(p => {
-      for (let i = 0; i < p.count; i++) {
-        remainingToPlace[key].push(p.key);
-      }
+      for (let i = 0; i < p.count; i++) remainingToPlace[army.name].push(p.key);
     });
-    // Shuffle the placement order
-    remainingToPlace[key] = shuffleArray([...remainingToPlace[key]]);
+    remainingToPlace[army.name] = shuffleArray([...remainingToPlace[army.name]]);
   });
 }
 
@@ -152,12 +125,9 @@ function shuffleArray(arr) {
   return arr;
 }
 
-/** Auto-fill remaining pieces for a player (random placement on their 4 rows) */
 function autoFillPlayer(player) {
   const army = getArmy(player);
   const key = army.name;
-
-  // Collect all cells in player's zone
   const zone = [];
   if (player === 1) {
     for (let r = 0; r < PLAYER_ROWS; r++)
@@ -168,13 +138,10 @@ function autoFillPlayer(player) {
       for (let c = 0; c < BOARD_SIZE; c++)
         if (board[r][c].player !== 2) zone.push({r,c});
   }
-
-  // Shuffle placement positions
   for (let i = zone.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [zone[i], zone[j]] = [zone[j], zone[i]];
   }
-
   let idx = 0;
   const remaining = remainingToPlace[key];
   while (remaining.length > 0 && idx < zone.length) {
@@ -195,65 +162,51 @@ function isInPlayerZone(player, row) {
 
 function onPlacementClick(row, col) {
   const army = getArmy(currentPlayer);
-  const key = army.name;
-  const remaining = remainingToPlace[key];
-
+  const remaining = remainingToPlace[army.name];
   if (remaining.length === 0) return;
-
-  // Only allow placement in player's zone
   if (!isInPlayerZone(currentPlayer, row)) return;
-
-  // Can only place on empty cells
   if (board[row][col].player !== 0) {
-    // Remove piece from this cell and put it back in the pool
-    const oldPiece = board[row][col].piece;
+    remaining.push(board[row][col].piece);
     board[row][col] = { player: 0, piece: null, visible: false };
-    remaining.push(oldPiece);
     draw();
+    updateStatus();
+    updateSidebars();
     return;
   }
-
-  // Place next piece from pool
-  const piece = remaining.pop();
-  board[row][col] = { player: currentPlayer, piece, visible: false };
+  board[row][col] = { player: currentPlayer, piece: remaining.pop(), visible: false };
   draw();
+  updateStatus();
+  updateSidebars();
 }
 
 function readyPlayer() {
   const army = getArmy(currentPlayer);
-  const key = army.name;
-  const remaining = remainingToPlace[key];
-
-  // Auto-fill if pieces remain
-  if (remaining.length > 0) {
-    autoFillPlayer(currentPlayer);
-  }
+  const remaining = remainingToPlace[army.name];
+  if (remaining.length > 0) autoFillPlayer(currentPlayer);
 
   if (currentPlayer === 1) {
     currentPlayer = 2;
     document.getElementById('phaseDisplay').textContent =
-      `Phase : Placement — 🎩 ${NAPOLEON.name}`;
+      'Phase : Placement — 🎩 ' + NAPOLEON.name;
   } else {
     phase = 'battle';
     currentPlayer = 1;
-    document.getElementById('phaseDisplay').textContent =
-      'Phase : ⚔️ Bataille !';
+    document.getElementById('phaseDisplay').textContent = 'Phase : ⚔️ Bataille !';
     document.getElementById('btnReady').style.display = 'none';
   }
   draw();
   updateStatus();
+  updateSidebars();
 }
 
 // ============================================================
-// BATTLE — MOVEMENT + CAPTURE
+// BATTLE
 // ============================================================
 
-/** Can player move this piece? */
 function isPlayerPiece(row, col, player) {
   return board[row][col].player === player;
 }
 
-/** Get straight-line moves for scouts */
 function getScoutMoves(row, col) {
   const moves = [];
   const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
@@ -271,97 +224,56 @@ function getScoutMoves(row, col) {
   return moves;
 }
 
-/** Get valid moves for pieceKey at (row, col) */
 function getValidMoves(row, col) {
   const piece = board[row][col].piece;
-  if (!piece) return [];
-  if (!isMobile(piece)) return []; // Flag and Bomb are immobile
-
-  if (piece === 'scout') {
-    return getScoutMoves(row, col);
-  }
-
-  // Normal: 1 step in any direction
+  if (!piece || !isMobile(piece)) return [];
+  if (piece === 'scout') return getScoutMoves(row, col);
   const moves = [];
-  const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
-  for (const [dr, dc] of dirs) {
+  for (const [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
     const r = row + dr, c = col + dc;
     if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) continue;
-    if (board[r][c].player === currentPlayer) continue; // Can't move onto own piece
+    if (board[r][c].player === currentPlayer) continue;
     moves.push({r, c});
   }
   return moves;
 }
 
-/**
- * Resolve combat: attacker moves onto defender.
- * Returns { attackerSurvives, defenderName, attackerName, result }
- */
 function resolveCombat(attRow, attCol, defRow, defCol) {
   const attArmy = getArmy(currentPlayer);
   const defArmy = getArmy(3 - currentPlayer);
-  const attPiece = board[attRow][attCol].piece;
-  const defPiece = board[defRow][defCol].piece;
-  const attRank = getRank(attArmy, attPiece);
-  const defRank = getRank(defArmy, defPiece);
-
-  const attName = getPiece(attArmy, attPiece).name;
-  const defName = getPiece(defArmy, defPiece).name;
-
+  const attRank = getRank(attArmy, board[attRow][attCol].piece);
+  const defRank = getRank(defArmy, board[defRow][defCol].piece);
+  const attName = getPiece(attArmy, board[attRow][attCol].piece).name;
+  const defName = getPiece(defArmy, board[defRow][defCol].piece).name;
   let attWins = false, defWins = false;
-
-  // Spy (1) attacking Marshal (10): spy wins
   if (attRank === 1 && defRank === 10) { attWins = true; defWins = false; }
-  // Miner (3) attacking Bomb (-1): miner defuses bomb
   else if (attRank === 3 && defRank === -1) { attWins = true; defWins = false; }
-  // Non-miner attacking Bomb: attacker dies
   else if (defRank === -1) { attWins = false; defWins = true; }
-  // Attacking Flag: instant win
   else if (defRank === 0) { attWins = true; defWins = false; }
-  // Normal combat: higher rank wins, equal = both die
   else if (attRank > defRank) { attWins = true; defWins = false; }
   else if (attRank < defRank) { attWins = false; defWins = true; }
-  else { attWins = false; defWins = false; } // égalité = les deux meurent
-
+  else { attWins = false; defWins = false; }
   return { attWins, defWins, attName, defName, defRank, attRank };
 }
 
 function movePiece(fromRow, fromCol, toRow, toCol) {
-  const movingPiece = board[fromRow][fromCol].piece;
-
   if (board[toRow][toCol].player === 0) {
-    // Empty square: just move
     board[toRow][toCol] = { ...board[fromRow][fromCol] };
     board[fromRow][fromCol] = { player: 0, piece: null, visible: false };
   } else {
-    // Combat!
     const result = resolveCombat(fromRow, fromCol, toRow, toCol);
-
-    if (result.defRank === 0) {
-      // Flag captured!
-      gameOver = true;
-      winner = currentPlayer;
-    }
-
-    if (result.attWins && result.defWins) {
-      // Both die (impossible for combat, but just in case)
-      board[fromRow][fromCol] = { player: 0, piece: null, visible: false };
-      board[toRow][toCol] = { player: 0, piece: null, visible: false };
-    } else if (result.attWins) {
+    if (result.defRank === 0) { gameOver = true; winner = currentPlayer; }
+    if (result.attWins) {
       board[toRow][toCol] = { ...board[fromRow][fromCol], visible: true };
       board[fromRow][fromCol] = { player: 0, piece: null, visible: false };
     } else if (result.defWins) {
-      // Defender wins: attacker dies, defender stays (revealed)
       board[fromRow][fromCol] = { player: 0, piece: null, visible: false };
       board[toRow][toCol].visible = true;
     } else {
-      // Both die (égalité)
       board[fromRow][fromCol] = { player: 0, piece: null, visible: false };
       board[toRow][toCol] = { player: 0, piece: null, visible: false };
     }
   }
-
-  // Check win condition: no mobile pieces left
   if (!gameOver) {
     let mobileLeft = 0;
     for (let r = 0; r < BOARD_SIZE; r++)
@@ -373,99 +285,59 @@ function movePiece(fromRow, fromCol, toRow, toCol) {
 }
 
 // ============================================================
-// BATTLE CLICK HANDLING
+// BATTLE CLICK
 // ============================================================
 
 function onBattleClick(row, col) {
   const cell = board[row][col];
-
-  // No selection yet: select own piece
   if (!selectedCell) {
-    if (isPlayerPiece(row, col, currentPlayer) && isMobile(cell.piece)) {
+    if (isPlayerPiece(row, col, currentPlayer) && isMobile(cell.piece))
       selectedCell = { row, col };
-    }
     return;
   }
-
   const sr = selectedCell.row, sc = selectedCell.col;
-
-  // Clicking same cell: deselect
-  if (sr === row && sc === col) {
-    selectedCell = null;
-    return;
-  }
-
-  // Clicking another of our pieces: reselect
-  if (isPlayerPiece(row, col, currentPlayer)) {
-    selectedCell = { row, col };
-    return;
-  }
-
-  // Try to move
+  if (sr === row && sc === col) { selectedCell = null; return; }
+  if (isPlayerPiece(row, col, currentPlayer)) { selectedCell = { row, col }; return; }
   const validMoves = getValidMoves(sr, sc);
-  const isValid = validMoves.some(m => m.r === row && m.c === col);
-
-  if (isValid) {
+  if (validMoves.some(m => m.r === row && m.c === col)) {
     movePiece(sr, sc, row, col);
     selectedCell = null;
-
-    if (!gameOver) {
-      // Switch turns
-      currentPlayer = 3 - currentPlayer;
-    }
-  } else {
-    selectedCell = null; // Invalid target
-  }
-
+    if (!gameOver) currentPlayer = 3 - currentPlayer;
+  } else { selectedCell = null; }
   draw();
   updateStatus();
+  updateSidebars();
 }
 
 // ============================================================
 // RENDER
 // ============================================================
 
-const TILE_COLORS = {
-  marshal:'#FF0000', general:'#FF4500', colonel:'#FF8C00', major:'#FFD700',
-  captain:'#32CD32', lieutenant:'#228B22', sergeant:'#4682B4',
-  miner:'#8A2BE2', scout:'#00CED1', spy:'#FF69B4', flag:'#FFFFFF', bomb:'#333333'
-};
-
 function resizeCanvas() {
-  const maxW = Math.min(window.innerWidth - 270, 600);
+  const maxW = Math.min(window.innerWidth - 420, 600);
   CELL = Math.max(36, Math.floor((maxW - PADDING*2 - GAP*(BOARD_SIZE-1)) / BOARD_SIZE));
   canvas.width = BOARD_SIZE * CELL + (BOARD_SIZE-1) * GAP + PADDING * 2;
   canvas.height = canvas.width;
 }
 
-/** Get cell coordinates in pixel */
 function cellXY(row, col) {
-  return {
-    x: PADDING + col * (CELL + GAP),
-    y: PADDING + row * (CELL + GAP),
-  };
+  return { x: PADDING + col * (CELL + GAP), y: PADDING + row * (CELL + GAP) };
 }
 
 function drawWaterlooBackground() {
-  // Morne plaine: dégradé vertical brun → gris → vert olive
   const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  grad.addColorStop(0, '#2d1f0e');   // Brun sombre (terre)
-  grad.addColorStop(0.3, '#3d2b1a'); // Brun moyen
-  grad.addColorStop(0.5, '#4a3728'); // Milieu
-  grad.addColorStop(0.6, '#3a4a30'); // Vert olive
-  grad.addColorStop(0.8, '#2a3518'); // Vert foncé
-  grad.addColorStop(1, '#1a2010');   // Vert très foncé
+  grad.addColorStop(0, '#2d1f0e');
+  grad.addColorStop(0.3, '#3d2b1a');
+  grad.addColorStop(0.5, '#4a3728');
+  grad.addColorStop(0.6, '#3a4a30');
+  grad.addColorStop(0.8, '#2a3518');
+  grad.addColorStop(1, '#1a2010');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Particules de brume (brume de Waterloo)
   ctx.fillStyle = 'rgba(200,195,180,0.03)';
   for (let i = 0; i < 40; i++) {
-    const bx = Math.random() * canvas.width;
-    const by = Math.random() * canvas.height;
-    const br = 15 + Math.random() * 40;
     ctx.beginPath();
-    ctx.arc(bx, by, br, 0, 2*Math.PI);
+    ctx.arc(Math.random()*canvas.width, Math.random()*canvas.height, 15+Math.random()*40, 0, 2*Math.PI);
     ctx.fill();
   }
 }
@@ -477,23 +349,17 @@ function drawCell(row, col) {
   const isEnemyPiece = cell.player !== 0 && cell.player !== currentPlayer && phase === 'battle';
   const isVisible = cell.visible || isOwnPiece || phase === 'placement';
 
-  // Background tile
   const isDark = (row + col) % 2 === 0;
   ctx.fillStyle = isDark ? 'rgba(30,25,15,0.6)' : 'rgba(45,38,25,0.6)';
   ctx.fillRect(x, y, CELL, CELL);
 
-  // Player zone highlights
   if (cell.player === 0) {
-    if (row < PLAYER_ROWS)
-      ctx.fillStyle = 'rgba(196,30,58,0.1)';   // Zone romaine
-    else if (row >= BOARD_SIZE - PLAYER_ROWS)
-      ctx.fillStyle = 'rgba(27,58,92,0.1)';    // Zone napoléonienne
-    else
-      ctx.fillStyle = 'rgba(50,40,25,0.2)';    // No man's land
+    if (row < PLAYER_ROWS) ctx.fillStyle = 'rgba(196,30,58,0.1)';
+    else if (row >= BOARD_SIZE - PLAYER_ROWS) ctx.fillStyle = 'rgba(27,58,92,0.1)';
+    else ctx.fillStyle = 'rgba(50,40,25,0.2)';
     ctx.fillRect(x, y, CELL, CELL);
   }
 
-  // Valid move highlight
   if (selectedCell && phase === 'battle') {
     const moves = getValidMoves(selectedCell.row, selectedCell.col);
     if (moves.some(m => m.r === row && m.c === col)) {
@@ -502,45 +368,26 @@ function drawCell(row, col) {
     }
   }
 
-  // Selection highlight
   if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3;
     ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
   }
 
-  // Draw piece
   if (cell.player !== 0 && cell.piece) {
-    if (!isVisible) {
-      drawHiddenPiece(x, y, cell.player);
-    } else {
-      drawPiece(x, y, cell);
-    }
+    if (!isVisible) drawHiddenPiece(x, y, cell.player);
+    else drawPiece(x, y, cell);
   }
 }
 
 function drawHiddenPiece(x, y, player) {
-  // Piece face cachée
   const army = getArmy(player);
-  const r = 4;
   ctx.fillStyle = army.color;
   ctx.beginPath();
-  ctx.moveTo(x + 5 + r, y + 5);
-  ctx.lineTo(x + CELL - 5 - r, y + 5);
-  ctx.arcTo(x + CELL - 5, y + 5, x + CELL - 5, y + 5 + r, r);
-  ctx.lineTo(x + CELL - 5, y + CELL - 5 - r);
-  ctx.arcTo(x + CELL - 5, y + CELL - 5, x + CELL - 5 - r, y + CELL - 5, r);
-  ctx.lineTo(x + 5 + r, y + CELL - 5);
-  ctx.arcTo(x + 5, y + CELL - 5, x + 5, y + CELL - 5 - r, r);
-  ctx.lineTo(x + 5, y + 5 + r);
-  ctx.arcTo(x + 5, y + 5, x + 5 + r, y + 5, r);
+  ctx.roundRect(x + 3, y + 3, CELL - 6, CELL - 6, 4);
   ctx.fill();
-
-  // Symbole "?"
   ctx.fillStyle = '#fff';
-  ctx.font = `bold ${CELL*0.5}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.font = 'bold ' + (CELL*0.5) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('?', x + CELL/2, y + CELL/2);
 }
 
@@ -549,122 +396,62 @@ function drawPiece(x, y, cell) {
   const piece = getPiece(army, cell.piece);
   if (!piece) return;
   const r = 4;
-
-  switch (displayMode) {
-    case 'numbers':
-      drawPieceNumbers(x, y, army, piece, r);
-      break;
-    case 'colors':
-      drawPieceColors(x, y, army, piece, r);
-      break;
-    case 'lissajous':
-      drawPieceLissajous(x, y, army, piece, r);
-      break;
-  }
+  if (displayMode === 'numbers') drawPieceNumbers(x, y, army, piece, r);
+  else if (displayMode === 'colors') drawPieceColors(x, y, army, piece, r);
+  else drawPieceLissajous(x, y, army, piece, r);
 }
 
 function drawPieceNumbers(x, y, army, piece, r) {
-  // Fond de la pièce
   ctx.fillStyle = 'rgba(255,255,255,0.15)';
-  ctx.beginPath();
-  ctx.roundRect(x + 3, y + 3, CELL - 6, CELL - 6, r);
-  ctx.fill();
-
-  // Bordure couleur armée
-  ctx.strokeStyle = army.color;
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Rang (gros)
+  ctx.beginPath(); ctx.roundRect(x+3, y+3, CELL-6, CELL-6, r); ctx.fill();
+  ctx.strokeStyle = army.color; ctx.lineWidth = 2; ctx.stroke();
   const rankText = piece.rank >= 0 ? String(piece.rank) : '💣';
   ctx.fillStyle = piece.rank >= 10 ? '#FFD700' : piece.rank >= 7 ? '#f0883e' : '#c9d1d9';
-  ctx.font = `bold ${CELL*0.35}px 'Segoe UI', sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.font = 'bold ' + (CELL*0.35) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(rankText, x + CELL/2, y + CELL*0.38);
-
-  // Nom court
   ctx.fillStyle = '#8b949e';
-  ctx.font = `${Math.max(CELL*0.15, 7)}px sans-serif`;
+  ctx.font = Math.max(CELL*0.15, 7) + 'px sans-serif';
   ctx.fillText(piece.short, x + CELL/2, y + CELL*0.7);
 }
 
 function drawPieceColors(x, y, army, piece, r) {
-  const tileColor = TILE_COLORS[piece.key] || '#555';
-  ctx.fillStyle = tileColor;
-  ctx.beginPath();
-  ctx.roundRect(x + 3, y + 3, CELL - 6, CELL - 6, r);
-  ctx.fill();
-
-  // Bordure armée
-  ctx.strokeStyle = army.accent;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Emoji
-  ctx.font = `${CELL*0.4}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.fillStyle = TILE_COLORS[piece.key] || '#555';
+  ctx.beginPath(); ctx.roundRect(x+3, y+3, CELL-6, CELL-6, r); ctx.fill();
+  ctx.strokeStyle = army.accent; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.font = (CELL*0.4) + 'px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(piece.emoji, x + CELL/2, y + CELL/2);
 }
 
 function drawPieceLissajous(x, y, army, piece, r) {
-  // Fond sombre
   ctx.fillStyle = '#161b22';
-  ctx.beginPath();
-  ctx.roundRect(x + 3, y + 3, CELL - 6, CELL - 6, r);
-  ctx.fill();
-
-  ctx.strokeStyle = army.accent;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  // Lissajous unique par rang
+  ctx.beginPath(); ctx.roundRect(x+3, y+3, CELL-6, CELL-6, r); ctx.fill();
+  ctx.strokeStyle = army.accent; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x + 3, y + 3, CELL - 6, CELL - 6, r);
-  ctx.clip();
-
-  const cx = x + CELL/2, cy = y + CELL/2;
-  const R = CELL * 0.28;
-  const fx = 1 + (Math.abs(piece.rank) % 4);
-  const fy = 2 + (Math.abs(piece.rank) % 3);
-
-  ctx.strokeStyle = army.accent;
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  const steps = 200 * Math.max(fx, fy);
-  const dt = (2 * Math.PI * Math.max(fx, fy)) / steps;
+  ctx.beginPath(); ctx.roundRect(x+3, y+3, CELL-6, CELL-6, r); ctx.clip();
+  const cx = x + CELL/2, cy = y + CELL/2, R = CELL * 0.28;
+  const fx = 1 + (Math.abs(piece.rank) % 4), fy = 2 + (Math.abs(piece.rank) % 3);
+  ctx.strokeStyle = army.accent; ctx.lineWidth = 1.2; ctx.beginPath();
+  const steps = 200 * Math.max(fx, fy), dt = (2*Math.PI*Math.max(fx,fy))/steps;
   let first = true;
-  for (let t = 0; t <= 2 * Math.PI * Math.max(fx, fy); t += dt) {
-    const sx = cx + R * Math.sin(fx * t);
-    const sy = cy + R * Math.sin(fy * t);
-    if (first) { ctx.moveTo(sx, sy); first = false; }
-    else ctx.lineTo(sx, sy);
+  for (let t = 0; t <= 2*Math.PI*Math.max(fx,fy); t += dt) {
+    const sx = cx + R*Math.sin(fx*t), sy = cy + R*Math.sin(fy*t);
+    if (first) { ctx.moveTo(sx,sy); first = false; } else ctx.lineTo(sx,sy);
   }
   ctx.stroke();
-
-  // Rang discret
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = `${Math.max(CELL*0.12, 6)}px sans-serif`;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText(piece.short, x + CELL - 4, y + CELL - 2);
-
   ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = Math.max(CELL*0.12,6) + 'px sans-serif';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText(piece.short, x + CELL - 4, y + CELL - 2);
 }
-
-// ============================================================
-// MAIN DRAW
-// ============================================================
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawWaterlooBackground();
-
   for (let r = 0; r < BOARD_SIZE; r++)
-    for (let c = 0; c < BOARD_SIZE; c++)
-      drawCell(r, c);
+    for (let c = 0; c < BOARD_SIZE; c++) drawCell(r, c);
 }
 
 // ============================================================
@@ -674,21 +461,86 @@ function draw() {
 function updateStatus() {
   if (gameOver) {
     const wname = winner === 1 ? '⚔️ Romains' : '🎩 Napoléon';
-    document.getElementById('phaseDisplay').textContent = `🏆 Victoire — ${wname} !`;
+    document.getElementById('phaseDisplay').textContent = '🏆 Victoire — ' + wname + ' !';
     document.getElementById('turnDisplay').textContent = '';
     return;
   }
-
   if (phase === 'placement') {
     const army = getArmy(currentPlayer);
-    const key = army.name;
-    const r = remainingToPlace[key].length;
     document.getElementById('turnDisplay').textContent =
-      `Pièces restantes : ${r}`;
+      'Pièces restantes : ' + remainingToPlace[army.name].length;
   } else {
     const pname = currentPlayer === 1 ? '⚔️ Romains' : '🎩 Napoléon';
-    document.getElementById('turnDisplay').textContent = `Tour : ${pname}`;
+    document.getElementById('turnDisplay').textContent = 'Tour : ' + pname;
   }
+}
+
+// ============================================================
+// SIDEBARS
+// ============================================================
+
+function toggleSidebar(side) {
+  const content = document.getElementById(side === 'left' ? 'sidebarLeftContent' : 'sidebarRightContent');
+  content.classList.toggle('open');
+}
+
+function buildReferenceTable(containerId, army) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  let html = '';
+  army.pieces.forEach(p => {
+    const rankClass = p.rank >= 10 ? 'high' : p.rank >= 7 ? 'med' : 'low';
+    const rankDisplay = p.rank >= 0 ? String(p.rank) : '💣';
+    const tileColor = TILE_COLORS[p.key] || '#555';
+    html +=
+      '<div class="ref-row">' +
+        '<span class="ref-rank ' + rankClass + '">' + rankDisplay + '</span>' +
+        '<span class="ref-name" title="' + p.name + '">' + p.short + '</span>' +
+        '<span class="ref-count">×' + p.count + '</span>' +
+        '<span class="ref-sample" style="background:' + tileColor + ';border:1px solid ' + army.accent + '">' + p.emoji + '</span>' +
+      '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function buildCapturedGrid(containerId, player) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const opponent = 3 - player;
+  const oppArmy = getArmy(opponent);
+  const fullRoster = [];
+  oppArmy.pieces.forEach(p => { for (let i = 0; i < p.count; i++) fullRoster.push(p.key); });
+  const aliveCount = {};
+  oppArmy.pieces.forEach(p => { aliveCount[p.key] = 0; });
+  for (let r = 0; r < BOARD_SIZE; r++)
+    for (let c = 0; c < BOARD_SIZE; c++)
+      if (board[r][c].player === opponent && board[r][c].piece)
+        aliveCount[board[r][c].piece] = (aliveCount[board[r][c].piece] || 0) + 1;
+  const consumed = {};
+  oppArmy.pieces.forEach(p => { consumed[p.key] = 0; });
+  let html = '';
+  fullRoster.forEach(key => {
+    consumed[key] = (consumed[key] || 0) + 1;
+    const isAlive = consumed[key] <= (aliveCount[key] || 0);
+    html +=
+      '<div class="captured-cell ' + (isAlive ? 'active' : 'taken') +
+      '" title="' + (isAlive ? 'En vie' : 'Détruite') + '">' +
+      (isAlive ? '●' : '○') +
+      '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function updateSidebars() {
+  buildReferenceTable('refTableRomans', ROMANS);
+  buildReferenceTable('refTableNapoleon', NAPOLEON);
+  buildCapturedGrid('capturedRomans', 1);
+  buildCapturedGrid('capturedNapoleon', 2);
+}
+
+function bindSidebarToggles() {
+  document.getElementById('toggleLeft').addEventListener('click', () => toggleSidebar('left'));
+  document.getElementById('toggleRight').addEventListener('click', () => toggleSidebar('right'));
 }
 
 // ============================================================
@@ -697,10 +549,8 @@ function updateStatus() {
 
 function getCellFromEvent(ev) {
   const rect = canvas.getBoundingClientRect();
-  const mx = ev.clientX - rect.left;
-  const my = ev.clientY - rect.top;
-  const col = Math.floor((mx - PADDING) / (CELL + GAP));
-  const row = Math.floor((my - PADDING) / (CELL + GAP));
+  const col = Math.floor((ev.clientX - rect.left - PADDING) / (CELL + GAP));
+  const row = Math.floor((ev.clientY - rect.top - PADDING) / (CELL + GAP));
   if (col < 0 || col >= BOARD_SIZE || row < 0 || row >= BOARD_SIZE) return null;
   return { row, col };
 }
@@ -710,17 +560,12 @@ function bindCanvasEvents() {
     if (gameOver) return;
     const cell = getCellFromEvent(ev);
     if (!cell) return;
-
     if (phase === 'placement') {
       onPlacementClick(cell.row, cell.col);
-      draw();
-      updateStatus();
       return;
     }
-
     onBattleClick(cell.row, cell.col);
   });
-
   canvas.addEventListener('contextmenu', (ev) => {
     ev.preventDefault();
     if (gameOver || phase !== 'battle') return;
@@ -738,6 +583,7 @@ function bindButtons() {
     resizeCanvas();
     draw();
     updateStatus();
+    updateSidebars();
   });
 }
 
@@ -758,8 +604,7 @@ function bindModalEvents() {
   document.getElementById('modalClose').addEventListener('click', () =>
     document.getElementById('modalOverlay').classList.remove('show'));
   document.getElementById('modalOverlay').addEventListener('click', (e) => {
-    if (e.target === e.currentTarget)
-      document.getElementById('modalOverlay').classList.remove('show');
+    if (e.target === e.currentTarget) document.getElementById('modalOverlay').classList.remove('show');
   });
 }
 
@@ -774,9 +619,10 @@ function init() {
   bindButtons();
   bindModeSwitch();
   bindModalEvents();
+  bindSidebarToggles();
   draw();
   updateStatus();
-
+  updateSidebars();
   window.addEventListener('resize', () => { resizeCanvas(); draw(); });
 }
 

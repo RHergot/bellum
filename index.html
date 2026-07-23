@@ -12,29 +12,62 @@
   <h1>⚔️ Bellum</h1>
   <p class="subtitle">Romains · Napoléon — Morne plaine de Waterloo</p>
 
+  <!-- LAYOUT : 3 colonnes (sidebar gauche · plateau · sidebar droite) -->
   <div class="layout">
-    <!-- Plateau -->
+
+    <!-- Colonne gauche — Armée romaine -->
+    <div class="sidebar" id="sidebarLeft">
+      <button class="toggle-btn" id="toggleLeft" title="Armée romaine">⚔️</button>
+      <div class="sidebar-content" id="sidebarLeftContent">
+        <h3>⚔️ Romains</h3>
+
+        <!-- Tableau de référence -->
+        <h4>📋 Grades</h4>
+        <div class="ref-table" id="refTableRomans"></div>
+
+        <!-- Grille des pièces prises/restantes -->
+        <h4>🎯 Pièces adverses prises</h4>
+        <div class="captured-grid" id="capturedRomans"></div>
+      </div>
+    </div>
+
+    <!-- Colonne centrale — Plateau -->
     <div class="board-area">
       <canvas id="board"></canvas>
     </div>
 
-    <!-- Panneau -->
-    <div class="panel">
-      <h2>🎨 Affichage</h2>
-      <div class="mode-switch" id="modeSwitch">
-        <button class="mode-btn active" data-mode="numbers">🔢</button>
-        <button class="mode-btn" data-mode="colors">🎨</button>
-        <button class="mode-btn" data-mode="lissajous">📡</button>
+    <!-- Colonne droite — Armée napoléonienne + contrôles -->
+    <div class="sidebar" id="sidebarRight">
+      <button class="toggle-btn" id="toggleRight" title="Armée napoléonienne">🎩</button>
+      <div class="sidebar-content" id="sidebarRightContent">
+        <h3>🎩 Napoléon</h3>
+
+        <!-- Tableau de référence -->
+        <h4>📋 Grades</h4>
+        <div class="ref-table" id="refTableNapoleon"></div>
+
+        <!-- Grille des pièces prises/restantes -->
+        <h4>🎯 Pièces adverses prises</h4>
+        <div class="captured-grid" id="capturedNapoleon"></div>
+
+        <!-- Contrôles (dans la sidebar droite) -->
+        <h4>🎨 Affichage</h4>
+        <div class="mode-switch" id="modeSwitch">
+          <button class="mode-btn active" data-mode="numbers">🔢</button>
+          <button class="mode-btn" data-mode="colors">🎨</button>
+          <button class="mode-btn" data-mode="lissajous">📡</button>
+        </div>
+
+        <h4>📊 Statut</h4>
+        <div id="phaseDisplay">Phase : Placement — ⚔️ Romains</div>
+        <div id="turnDisplay"></div>
+
+        <button class="btn primary" id="btnReady">✅ Prêt — Phase bataille</button>
+        <button class="btn" id="btnReset">🔄 Recommencer</button>
+        <button class="btn" id="btnRules">📖 Règles</button>
       </div>
-
-      <h2>📊 Statut</h2>
-      <div id="phaseDisplay">Phase : Placement — ⚔️ Romains</div>
-      <div id="turnDisplay"></div>
-
-      <button class="btn primary" id="btnReady">✅ Prêt — Phase bataille</button>
-      <button class="btn" id="btnReset">🔄 Recommencer</button>
-      <button class="btn" id="btnRules">📖 Règles</button>
     </div>
+
   </div>
 
   <!-- Modale -->
