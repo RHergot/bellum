@@ -155,27 +155,26 @@ canvas {
 /* ── CAPTURED GRID ── */
 .captured-grid {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 2px;
 }
 
 .captured-cell {
   aspect-ratio: 1;
-  border-radius: 3px;
-  font-size: 0.45rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-weight: bold;
-  min-width: 14px;
+  min-width: 20px;
+  border: 2px solid transparent;
 }
-.captured-cell.taken  { background: #238636; }  /* vert */
-.captured-cell.active { background: #c41e3a; }  /* rouge */
-.captured-cell.lost   { background: #6e2d35; }  /* rouge foncé = a perdu sa propre pièce */
+.captured-cell.alive { background: rgba(196,30,58,0.25); border-color: #C41E3A; }  /* rouge = encore en vie */
+.captured-cell.taken { background: rgba(35,134,54,0.2); border-color: #238636; }  /* vert = prise */
 
 /* ── MODE SWITCH ── */
 .mode-switch { display: flex; gap: 3px; }
+.below-board { margin-top: 8px; }
 .mode-btn {
   flex: 1; padding: 5px 2px; font-size: 0.8rem;
   border: 1px solid #30363d; background: #21262d; border-radius: 4px; cursor: pointer;

@@ -31,9 +31,16 @@
       </div>
     </div>
 
-    <!-- Colonne centrale — Plateau -->
+    <!-- Colonne centrale — Plateau + Switch affichage -->
     <div class="board-area">
       <canvas id="board"></canvas>
+
+      <!-- Switch d'affichage toujours visible -->
+      <div class="mode-switch below-board" id="modeSwitch">
+        <button class="mode-btn active" data-mode="numbers">🔢 Chiffres</button>
+        <button class="mode-btn" data-mode="colors">🎨 Couleurs</button>
+        <button class="mode-btn" data-mode="lissajous">📡 Ondes</button>
+      </div>
     </div>
 
     <!-- Colonne droite — Armée napoléonienne + contrôles -->
@@ -51,13 +58,6 @@
         <div class="captured-grid" id="capturedNapoleon"></div>
 
         <!-- Contrôles (dans la sidebar droite) -->
-        <h4>🎨 Affichage</h4>
-        <div class="mode-switch" id="modeSwitch">
-          <button class="mode-btn active" data-mode="numbers">🔢</button>
-          <button class="mode-btn" data-mode="colors">🎨</button>
-          <button class="mode-btn" data-mode="lissajous">📡</button>
-        </div>
-
         <h4>📊 Statut</h4>
         <div id="phaseDisplay">Phase : Placement — ⚔️ Romains</div>
         <div id="turnDisplay"></div>

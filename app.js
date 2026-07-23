@@ -495,7 +495,7 @@ function buildReferenceTable(containerId, army) {
     html +=
       '<div class="ref-row">' +
         '<span class="ref-rank ' + rankClass + '">' + rankDisplay + '</span>' +
-        '<span class="ref-name" title="' + p.name + '">' + p.short + '</span>' +
+        '<span class="ref-name" title="' + p.name + '">' + p.name + '</span>' +
         '<span class="ref-count">×' + p.count + '</span>' +
         '<span class="ref-sample" style="background:' + tileColor + ';border:1px solid ' + army.accent + '">' + p.emoji + '</span>' +
       '</div>';
@@ -509,7 +509,7 @@ function buildCapturedGrid(containerId, player) {
   const opponent = 3 - player;
   const oppArmy = getArmy(opponent);
   const fullRoster = [];
-  oppArmy.pieces.forEach(p => { for (let i = 0; i < p.count; i++) fullRoster.push(p.key); });
+  oppArmy.pieces.forEach(p => { for (let i = 0; i < p.count; i++) fullRoster.push({ key: p.key, emoji: p.emoji }); });
   const aliveCount = {};
   oppArmy.pieces.forEach(p => { aliveCount[p.key] = 0; });
   for (let r = 0; r < BOARD_SIZE; r++)
@@ -519,13 +519,14 @@ function buildCapturedGrid(containerId, player) {
   const consumed = {};
   oppArmy.pieces.forEach(p => { consumed[p.key] = 0; });
   let html = '';
-  fullRoster.forEach(key => {
-    consumed[key] = (consumed[key] || 0) + 1;
-    const isAlive = consumed[key] <= (aliveCount[key] || 0);
+  fullRoster.forEach(piece => {
+    consumed[piece.key] = (consumed[piece.key] || 0) + 1;
+    const isAlive = consumed[piece.key] <= (aliveCount[piece.key] || 0);
+    // Rouge = encore en vie (dangereux), Vert = prise/détruite
     html +=
-      '<div class="captured-cell ' + (isAlive ? 'active' : 'taken') +
-      '" title="' + (isAlive ? 'En vie' : 'Détruite') + '">' +
-      (isAlive ? '●' : '○') +
+      '<div class="captured-cell ' + (isAlive ? 'alive' : 'taken') +
+      '" title="' + (isAlive ? 'En vie' : 'Prise !') + '">' +
+      piece.emoji +
       '</div>';
   });
   container.innerHTML = html;
