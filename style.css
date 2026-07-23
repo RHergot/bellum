@@ -174,16 +174,20 @@ canvas {
 
 /* ── MODE SWITCH ── */
 .mode-switch { display: flex; gap: 3px; }
-.below-board { margin-top: 8px; }
 .mode-btn {
   flex: 1; padding: 5px 2px; font-size: 0.8rem;
   border: 1px solid #30363d; background: #21262d; border-radius: 4px; cursor: pointer;
 }
 .mode-btn.active { background: #1f6feb; border-color: #58a6ff; }
 
+/* ── CONTROLS BAR (sous la grille) ── */
+.controls-bar { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-width: 600px; }
+.status-bar { font-size: 0.7rem; }
+.status-bar #phaseDisplay { color: #f0883e; min-height: 1.2em; }
+.status-bar #turnDisplay   { color: #8b949e; min-height: 1em; font-size: 0.65rem; }
+.btn-bar { display: flex; gap: 4px; }
+
 /* ── STATUS ── */
-#phaseDisplay { font-size: 0.7rem; color: #f0883e; min-height: 1.5em; }
-#turnDisplay   { font-size: 0.65rem; color: #8b949e; min-height: 1em; }
 
 /* ── BUTTONS ── */
 .btn {

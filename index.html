@@ -20,51 +20,49 @@
       <button class="toggle-btn" id="toggleLeft" title="Armée romaine">⚔️</button>
       <div class="sidebar-content" id="sidebarLeftContent">
         <h3>⚔️ Romains</h3>
-
-        <!-- Tableau de référence -->
         <h4>📋 Grades</h4>
         <div class="ref-table" id="refTableRomans"></div>
-
-        <!-- Grille des pièces prises/restantes -->
         <h4>🎯 Pièces adverses prises</h4>
         <div class="captured-grid" id="capturedRomans"></div>
       </div>
     </div>
 
-    <!-- Colonne centrale — Plateau + Switch affichage -->
+    <!-- Colonne centrale — Plateau + Contrôles toujours visibles -->
     <div class="board-area">
       <canvas id="board"></canvas>
 
-      <!-- Switch d'affichage toujours visible -->
-      <div class="mode-switch below-board" id="modeSwitch">
-        <button class="mode-btn active" data-mode="numbers">🔢 Chiffres</button>
-        <button class="mode-btn" data-mode="colors">🎨 Couleurs</button>
-        <button class="mode-btn" data-mode="lissajous">📡 Ondes</button>
+      <!-- Switch d'affichage -->
+      <div class="controls-bar">
+        <div class="mode-switch" id="modeSwitch">
+          <button class="mode-btn active" data-mode="numbers">🔢 Chiffres</button>
+          <button class="mode-btn" data-mode="colors">🎨 Couleurs</button>
+          <button class="mode-btn" data-mode="lissajous">📡 Ondes</button>
+        </div>
+
+        <!-- Statut -->
+        <div class="status-bar">
+          <div id="phaseDisplay">Phase : Placement — ⚔️ Romains</div>
+          <div id="turnDisplay"></div>
+        </div>
+
+        <!-- Boutons -->
+        <div class="btn-bar">
+          <button class="btn primary" id="btnReady">✅ Prêt — Phase bataille</button>
+          <button class="btn" id="btnReset">🔄 Recommencer</button>
+          <button class="btn" id="btnRules">📖 Règles</button>
+        </div>
       </div>
     </div>
 
-    <!-- Colonne droite — Armée napoléonienne + contrôles -->
+    <!-- Colonne droite — Armée napoléonienne -->
     <div class="sidebar" id="sidebarRight">
       <button class="toggle-btn" id="toggleRight" title="Armée napoléonienne">🎩</button>
       <div class="sidebar-content" id="sidebarRightContent">
         <h3>🎩 Napoléon</h3>
-
-        <!-- Tableau de référence -->
         <h4>📋 Grades</h4>
         <div class="ref-table" id="refTableNapoleon"></div>
-
-        <!-- Grille des pièces prises/restantes -->
         <h4>🎯 Pièces adverses prises</h4>
         <div class="captured-grid" id="capturedNapoleon"></div>
-
-        <!-- Contrôles (dans la sidebar droite) -->
-        <h4>📊 Statut</h4>
-        <div id="phaseDisplay">Phase : Placement — ⚔️ Romains</div>
-        <div id="turnDisplay"></div>
-
-        <button class="btn primary" id="btnReady">✅ Prêt — Phase bataille</button>
-        <button class="btn" id="btnReset">🔄 Recommencer</button>
-        <button class="btn" id="btnRules">📖 Règles</button>
       </div>
     </div>
 
