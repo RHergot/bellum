@@ -2,11 +2,25 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 import uuid
+import os
+from datetime import datetime
 from .stratego_logic import StrategoBoard, create_army_pieces, BOARD_SIZE, LAKES
 from .ismcts import ISMCTSAI
 
 # In-memory active games store
 ACTIVE_GAMES = {}
+
+LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'docs', 'game-log.md')
+
+
+def _log_move(game_id, player, piece, sr, sc, tr, tc, result='move'):
+    """Append a move to the game log file."""
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    try:
+        with open(LOG_FILE, 'a') as f:
+            f.write(f'| {ts} | {game_id} | P{player} | {piece} | ({sr},{sc})→({tr},{tc}) | {result} |\n')
+    except Exception:
+        pass  # non-critical
 
 
 def _validate_move(board, player, sr, sc, tr, tc):
@@ -121,6 +135,8 @@ class MakeMoveAPIView(APIView):
         ai = ISMCTSAI(ai_player=2)
         try:
             ai.execute_move(board, ((sr, sc), (tr, tc)))
+            src_piece = board.grid[tr][tc]['piece'] if board.grid[tr][tc]['player'] == player else board.grid[sr][sc]['piece']
+            _log_move(game_id, player, src_piece or '?', sr, sc, tr, tc, 'move')
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -138,6 +154,9 @@ class MakeMoveAPIView(APIView):
         ai_move = ai.choose_move(board, simulations=20)
         if ai_move:
             ai.execute_move(board, ai_move)
+            (ai_sr, ai_sc), (ai_tr, ai_tc) = ai_move
+            ai_piece = board.grid[ai_tr][ai_tc]['piece'] if board.grid[ai_tr][ai_tc]['player'] == 2 else board.grid[ai_sr][ai_sc]['piece']
+            _log_move(game_id, 2, ai_piece or '?', ai_sr, ai_sc, ai_tr, ai_tc, 'AI')
 
         # Switch turn back to Player 1
         board.current_turn = 1
@@ -145,5 +164,6 @@ class MakeMoveAPIView(APIView):
         return Response({
             'status': 'success',
             'current_turn': 1,
+            'ai_move': ai_move,
             'state': board.to_dict(for_player=player)
         })

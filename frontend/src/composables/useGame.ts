@@ -19,6 +19,13 @@ export const gameState = reactive({
   statusMessage: 'Cliquez sur « Nouvelle Partie » pour commencer.',
   remainingToPlace: {} as Record<string, string[]>,
   myPlayer: 1,
+  moveHistory: [] as Array<{
+    type: 'game_start' | 'select' | 'move' | 'ai_move' | 'error' | 'game_over'
+    gameId?: string
+    sr?: number; sc?: number; tr?: number; tc?: number
+    attacker?: string; defender?: string; result?: string
+    message?: string
+  }>,
 })
 
 function emptyGrid(): Cell[][] {
@@ -48,6 +55,7 @@ export async function startNewGame() {
     gameState.phase = 'battle'
     gameState.currentPlayer = 1
     gameState.selectedCell = null
+    gameState.moveHistory = [{ type: 'game_start', gameId: data.game_id }]
     gameState.statusMessage = `Partie ${data.game_id} — À vous de jouer (⚔️ Romains).`
   } catch (err) {
     gameState.statusMessage = 'Erreur de connexion au backend.'
@@ -81,8 +89,9 @@ export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
     })
     const data = await res.json()
     if (data.error) {
-      // Friendlier messages for immobile pieces
       const msg = data.error
+      gameState.moveHistory.push({ type: 'error', message: msg, sr, sc, tr, tc })
+      // Friendlier messages for immobile pieces
       if (msg.includes('cannot move')) {
         gameState.statusMessage = `⛔ Cette pièce ne peut pas se déplacer (${msg}).`
       } else if (msg.includes('Not your turn')) {
@@ -93,13 +102,33 @@ export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
       return
     }
 
+    // Log successful move
+    const srcCell = gameState.grid[sr]?.[sc]
+    const dstCell = gameState.grid[tr]?.[tc]
+    gameState.moveHistory.push({
+      type: 'move',
+      sr, sc, tr, tc,
+      attacker: srcCell?.piece || undefined,
+      defender: dstCell?.piece || undefined,
+      result: dstCell?.player === 0 ? 'move' :
+              data.state.game_over && data.state.winner === gameState.myPlayer ? 'attacker_win' :
+              'combat'
+    })
+
     gameState.grid = data.state.grid
     gameState.gameOver = data.state.game_over
     gameState.winner = data.state.winner
     gameState.currentTurn = data.current_turn || 1
 
+    // Log AI move if present
+    if (data.ai_move) {
+      const [aiSrc, aiDst] = data.ai_move
+      gameState.moveHistory.push({ type: 'ai_move', sr: aiSrc[0], sc: aiSrc[1], tr: aiDst[0], tc: aiDst[1] })
+    }
+
     if (gameState.gameOver) {
       const wname = gameState.winner === 1 ? '⚔️ Romains' : '🎩 Napoléon'
+      gameState.moveHistory.push({ type: 'game_over', message: `Victoire — ${wname}` })
       gameState.statusMessage = `🏆 Victoire — ${wname} !`
     } else {
       gameState.statusMessage = 'Coup joué. À vous !'
@@ -128,6 +157,7 @@ export function handleCellClick(r: number, c: number) {
         return
       }
       gameState.selectedCell = { r, c }
+      gameState.moveHistory.push({ type: 'select', sr: r, sc: c })
       gameState.statusMessage = `Pièce sélectionnée en (${r}, ${c}). Choisissez la destination.`
     }
   } else {
@@ -140,6 +170,7 @@ export function handleCellClick(r: number, c: number) {
     const dstCell = gameState.grid[r]?.[c]
     if (dstCell && dstCell.player === gameState.myPlayer) {
       gameState.selectedCell = { r, c }
+      gameState.moveHistory.push({ type: 'select', sr: r, sc: c })
       gameState.statusMessage = `Pièce sélectionnée en (${r}, ${c}). Choisissez la destination.`
       return
     }

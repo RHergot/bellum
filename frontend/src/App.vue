@@ -4,6 +4,7 @@ import GameCanvas from './components/GameCanvas.vue'
 import Sidebar from './components/Sidebar.vue'
 import ModeSwitch from './components/ModeSwitch.vue'
 import RulesModal from './components/RulesModal.vue'
+import MoveLog from './components/MoveLog.vue'
 import { gameState, startNewGame } from './composables/useGame'
 
 const rulesModalRef = ref<InstanceType<typeof RulesModal> | null>(null)
@@ -30,6 +31,8 @@ const rulesModalRef = ref<InstanceType<typeof RulesModal> | null>(null)
             <button class="btn" @click="rulesModalRef?.open()">📖 Règles</button>
           </div>
         </div>
+
+        <MoveLog />
       </div>
       <Sidebar side="right" :player="2" />
     </div>
