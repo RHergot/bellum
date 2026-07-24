@@ -133,10 +133,10 @@ class MakeMoveAPIView(APIView):
 
         # Execute Player move
         ai = ISMCTSAI(ai_player=2)
+        src_piece_key = board.grid[sr][sc]['piece']  # log before move (piece may be destroyed)
         try:
             ai.execute_move(board, ((sr, sc), (tr, tc)))
-            src_piece = board.grid[tr][tc]['piece'] if board.grid[tr][tc]['player'] == player else board.grid[sr][sc]['piece']
-            _log_move(game_id, player, src_piece or '?', sr, sc, tr, tc, 'move')
+            _log_move(game_id, player, src_piece_key or '?', sr, sc, tr, tc, 'move')
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -153,10 +153,10 @@ class MakeMoveAPIView(APIView):
         # Execute AI Player 2 move automatically
         ai_move = ai.choose_move(board, simulations=20)
         if ai_move:
-            ai.execute_move(board, ai_move)
             (ai_sr, ai_sc), (ai_tr, ai_tc) = ai_move
-            ai_piece = board.grid[ai_tr][ai_tc]['piece'] if board.grid[ai_tr][ai_tc]['player'] == 2 else board.grid[ai_sr][ai_sc]['piece']
-            _log_move(game_id, 2, ai_piece or '?', ai_sr, ai_sc, ai_tr, ai_tc, 'AI')
+            ai_piece_key = board.grid[ai_sr][ai_sc]['piece']  # log before move
+            ai.execute_move(board, ai_move)
+            _log_move(game_id, 2, ai_piece_key or '?', ai_sr, ai_sc, ai_tr, ai_tc, 'AI')
 
         # Switch turn back to Player 1
         board.current_turn = 1

@@ -6,6 +6,7 @@ class ISMCTSAI:
     def __init__(self, ai_player=2):
         self.ai_player = ai_player
         self.opponent_player = 1 if ai_player == 2 else 2
+        self._last_positions = {}  # piece coordinate → previous position, avoid ping-pong
 
     def get_legal_moves(self, board, player):
         moves = []
@@ -71,28 +72,37 @@ class ISMCTSAI:
         if not legal_moves:
             return None
 
-        move_scores = {move: 0 for move in legal_moves}
+        move_scores = {move: 0.0 for move in legal_moves}
 
         for _ in range(simulations):
-            # 1. Determinization: create a plausible full board state
-            #    by randomizing unrevealed enemy pieces
             sim_board = self.determinize(real_board, self.ai_player)
 
-            # 2. Evaluate each legal move on this determinization
             for move in legal_moves:
                 test_board = copy.deepcopy(sim_board)
                 try:
                     self.execute_move(test_board, move)
-                    # Heuristic score: material balance
                     score = self.evaluate_board(test_board, self.ai_player)
                     move_scores[move] += score
                 except Exception:
                     pass
 
-        # Return best move
-        if not move_scores:
-            return None
+        # Anti-ping-pong: penalize moves that return to the previous position
+        for move in legal_moves:
+            (sr, sc), (tr, tc) = move
+            # If this destination was the previous source (ping-pong), penalize
+            prev_src = self._last_positions.get((tr, tc))
+            if prev_src == (sr, sc):
+                move_scores[move] -= 500  # heavy penalty for going back
+            # Add small random jitter to break ties (prevents deterministic loops)
+            move_scores[move] += random.uniform(-10, 10)
+
+        # Pick best move
         best_move = max(legal_moves, key=lambda m: move_scores.get(m, 0))
+
+        # Remember this move to detect ping-pong next turn
+        (bsr, bsc), (btr, btc) = best_move
+        self._last_positions[(bsr, bsc)] = (btr, btc)
+
         return best_move
 
     def determinize(self, real_board, ai_player):
