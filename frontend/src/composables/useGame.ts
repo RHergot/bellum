@@ -72,9 +72,12 @@ export async function fetchState() {
 
 export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
   if (!gameState.gameId || gameState.gameOver) return
+  console.log('[DEBUG] makeMove gameId:', gameState.gameId, 'move:', sr, sc, '→', tr, tc)
 
   try {
-    const res = await fetch(`${API_BASE}/api/game/${gameState.gameId}/move/`, {
+    const url = `${API_BASE}/api/game/${gameState.gameId}/move/`
+    console.log('[DEBUG] POST', url)
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sr, sc, tr, tc, player: gameState.myPlayer })

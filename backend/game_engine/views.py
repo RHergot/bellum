@@ -91,6 +91,7 @@ class GameStateAPIView(APIView):
 
 class MakeMoveAPIView(APIView):
     def post(self, request, game_id):
+        print(f"[DEBUG] MakeMove game_id={game_id}, ACTIVE_GAMES keys={list(ACTIVE_GAMES.keys())}")
         if game_id not in ACTIVE_GAMES:
             return Response({'error': 'Game not found'}, status=status.HTTP_404_NOT_FOUND)
 
