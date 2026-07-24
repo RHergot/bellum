@@ -33,13 +33,17 @@ defineExpose({ show, open: () => show.value = true, close: () => show.value = fa
 
         <h3>Hiérarchie (du plus fort au plus faible)</h3>
         <table>
-          <tr><th>Rang</th><th>⚔️ Romain</th><th>🎩 Napoléon</th><th>Qté</th></tr>
-          <tr v-for="r in rules" :key="r.rank">
-            <td>{{ r.rank >= 0 ? r.rank : '💣' }}</td>
-            <td>{{ r.roman }}</td>
-            <td>{{ r.napoleon }}</td>
-            <td>×{{ r.count }}</td>
-          </tr>
+          <thead>
+            <tr><th>Rang</th><th>⚔️ Romain</th><th>🎩 Napoléon</th><th>Qté</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in rules" :key="r.rank">
+              <td>{{ r.rank >= 0 ? r.rank : '💣' }}</td>
+              <td>{{ r.roman }}</td>
+              <td>{{ r.napoleon }}</td>
+              <td>×{{ r.count }}</td>
+            </tr>
+          </tbody>
         </table>
 
         <h3>Résolution des combats</h3>
