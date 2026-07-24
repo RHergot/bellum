@@ -2,7 +2,7 @@ import { ref, reactive } from 'vue'
 import type { Cell, GridState, GamePhase, AIMode, DisplayMode } from '../types/game'
 import { getArmy, isMobile } from '../data/armies'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 // Shared reactive state
 export const gameState = reactive({
