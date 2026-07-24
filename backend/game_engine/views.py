@@ -10,7 +10,7 @@ from .ismcts import ISMCTSAI
 # In-memory active games store
 ACTIVE_GAMES = {}
 
-LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'docs', 'game-log.md')
+LOG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'docs', 'game-log.md')
 
 
 def _log_move(game_id, player, piece, sr, sc, tr, tc, result='move'):
