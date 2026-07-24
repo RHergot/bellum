@@ -1,0 +1,5 @@
+Django>=6.0,<7.0
+djangorestframework>=3.17,<4
+django-cors-headers>=4.9,<5
+gunicorn>=26
+pytest>=9
