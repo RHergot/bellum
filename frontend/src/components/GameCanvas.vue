@@ -2,16 +2,30 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { gameState, handleCellClick } from '../composables/useGame'
 import { getArmy, getPiece, TILE_COLORS, isMobile } from '../data/armies'
-import type { DisplayMode } from '../types/game'
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let ctx: CanvasRenderingContext2D | null = null
-let animationId = 0
 
 const BOARD_SIZE = 10
 const PADDING = 8
 const GAP = 2
 let CELL = 52
+// Pre-generated decorations (stable, no Math.random in render loop)
+let bgDecorations: { x: number; y: number; r: number }[] = []
+
+function generateBgDecorations(w: number, h: number) {
+  bgDecorations = []
+  // Use a simple deterministic hash instead of Math.random
+  let seed = 42
+  function pseudoRandom() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646 }
+  for (let i = 0; i < 40; i++) {
+    bgDecorations.push({
+      x: pseudoRandom() * w,
+      y: pseudoRandom() * h,
+      r: 15 + pseudoRandom() * 40
+    })
+  }
+}
 
 function resize() {
   const canvas = canvasRef.value
@@ -20,6 +34,8 @@ function resize() {
   CELL = Math.max(36, Math.floor((maxW - PADDING * 2 - GAP * (BOARD_SIZE - 1)) / BOARD_SIZE))
   canvas.width = BOARD_SIZE * CELL + (BOARD_SIZE - 1) * GAP + PADDING * 2
   canvas.height = canvas.width
+  generateBgDecorations(canvas.width, canvas.height)
+  draw()
 }
 
 function cellXY(row: number, col: number) {
@@ -49,9 +65,9 @@ function drawWaterlooBackground() {
   ctx.fillStyle = grad
   ctx.fillRect(0, 0, width, height)
   ctx.fillStyle = 'rgba(200,195,180,0.03)'
-  for (let i = 0; i < 40; i++) {
+  for (const d of bgDecorations) {
     ctx.beginPath()
-    ctx.arc(Math.random() * width, Math.random() * height, 15 + Math.random() * 40, 0, 2 * Math.PI)
+    ctx.arc(d.x, d.y, d.r, 0, 2 * Math.PI)
     ctx.fill()
   }
 }
@@ -80,7 +96,6 @@ function drawCell(row: number, col: number) {
     const sr = gameState.selectedCell.r, sc = gameState.selectedCell.c
     const piece = gameState.grid[sr]?.[sc]?.piece
     if (piece === 'scout') {
-      // Scout: check all 4 directions
       for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
         let rr = sr + dr, cc = sc + dc
         while (rr >= 0 && rr < 10 && cc >= 0 && cc < 10) {
@@ -213,22 +228,23 @@ function onClick(ev: MouseEvent) {
 function onContextMenu(ev: MouseEvent) {
   ev.preventDefault()
   gameState.selectedCell = null
+  draw()
 }
 
-function renderLoop() {
-  draw()
-  animationId = requestAnimationFrame(renderLoop)
-}
+// Watch gameState for changes → redraw only when needed (no 60fps loop!)
+watch(
+  () => [gameState.grid, gameState.selectedCell, gameState.displayMode, gameState.gameOver],
+  () => draw(),
+  { deep: true }
+)
 
 onMounted(() => {
   ctx = canvasRef.value?.getContext('2d') ?? null
   resize()
-  renderLoop()
   window.addEventListener('resize', resize)
 })
 
 onUnmounted(() => {
-  cancelAnimationFrame(animationId)
   window.removeEventListener('resize', resize)
 })
 </script>
@@ -238,6 +254,5 @@ onUnmounted(() => {
     ref="canvasRef"
     @click="onClick"
     @contextmenu="onContextMenu"
-    class="border-2 border-[#30363d] rounded-md block cursor-pointer touch-manipulation"
   />
 </template>
