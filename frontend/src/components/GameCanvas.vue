@@ -158,6 +158,15 @@ function drawPiece(x: number, y: number, cell: { player: number; piece: string |
   if (mode === 'numbers') drawPieceNumbers(x, y, army, piece)
   else if (mode === 'colors') drawPieceColors(x, y, army, piece)
   else drawPieceLissajous(x, y, army, piece)
+
+  // Visual indicator for immobile pieces (bomb, flag)
+  if (!isMobile(cell.piece) && cell.player === gameState.myPlayer) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+    ctx.lineWidth = 1
+    ctx.setLineDash([2, 3])
+    ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4)
+    ctx.setLineDash([])
+  }
 }
 
 function drawPieceNumbers(x: number, y: number, army: ReturnType<typeof getArmy>, piece: ReturnType<typeof getPiece>) {

@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_URL || ''
 // Shared reactive state
 export const gameState = reactive({
   gameId: null as string | null,
-  phase: 'placement' as GamePhase,
+  phase: 'battle' as GamePhase,
   currentPlayer: 1,
   currentTurn: 1,
   grid: [] as Cell[][],
@@ -16,9 +16,9 @@ export const gameState = reactive({
   winner: null as number | null,
   mode: 'vs_ai' as AIMode,
   displayMode: 'numbers' as DisplayMode,
-  statusMessage: 'Cliquez sur "Nouvelle Partie" pour commencer.',
+  statusMessage: 'Cliquez sur « Nouvelle Partie » pour commencer.',
   remainingToPlace: {} as Record<string, string[]>,
-  myPlayer: 1, // which player am I? (for multi-screen: 1 or 2)
+  myPlayer: 1,
 })
 
 function emptyGrid(): Cell[][] {
@@ -48,7 +48,7 @@ export async function startNewGame() {
     gameState.phase = 'battle'
     gameState.currentPlayer = 1
     gameState.selectedCell = null
-    gameState.statusMessage = `Partie ${data.game_id} lancée ! ${gameState.mode === 'vs_ai' ? 'À vous de jouer (⚔️ Romains).' : '⚔️ Romains commence.'}`
+    gameState.statusMessage = `Partie ${data.game_id} — À vous de jouer (⚔️ Romains).`
   } catch (err) {
     gameState.statusMessage = 'Erreur de connexion au backend.'
     console.error(err)
@@ -72,19 +72,24 @@ export async function fetchState() {
 
 export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
   if (!gameState.gameId || gameState.gameOver) return
-  console.log('[DEBUG] makeMove gameId:', gameState.gameId, 'move:', sr, sc, '→', tr, tc)
 
   try {
-    const url = `${API_BASE}/api/game/${gameState.gameId}/move/`
-    console.log('[DEBUG] POST', url)
-    const res = await fetch(url, {
+    const res = await fetch(`${API_BASE}/api/game/${gameState.gameId}/move/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sr, sc, tr, tc, player: gameState.myPlayer })
     })
     const data = await res.json()
     if (data.error) {
-      gameState.statusMessage = `Erreur : ${data.error}`
+      // Friendlier messages for immobile pieces
+      const msg = data.error
+      if (msg.includes('cannot move')) {
+        gameState.statusMessage = `⛔ Cette pièce ne peut pas se déplacer (${msg}).`
+      } else if (msg.includes('Not your turn')) {
+        gameState.statusMessage = '⏳ Ce n\'est pas votre tour.'
+      } else {
+        gameState.statusMessage = `⚠️ ${msg}`
+      }
       return
     }
 
@@ -108,14 +113,20 @@ export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
 export function handleCellClick(r: number, c: number) {
   if (gameState.gameOver || !gameState.gameId) return
   if (gameState.currentTurn !== gameState.myPlayer) {
-    gameState.statusMessage = "Ce n'est pas votre tour."
+    gameState.statusMessage = "⏳ Ce n'est pas votre tour."
     return
   }
 
   if (!gameState.selectedCell) {
-    // Select piece
     const cell = gameState.grid[r]?.[c]
-    if (cell && cell.player === gameState.myPlayer && isMobile(cell.piece)) {
+    if (cell && cell.player === gameState.myPlayer) {
+      if (!isMobile(cell.piece)) {
+        const army = getArmy(gameState.myPlayer)
+        const piece = army.pieces.find(p => p.key === cell.piece)
+        const name = piece?.name || cell.piece
+        gameState.statusMessage = `⛔ ${name} ne peut pas se déplacer.`
+        return
+      }
       gameState.selectedCell = { r, c }
       gameState.statusMessage = `Pièce sélectionnée en (${r}, ${c}). Choisissez la destination.`
     }
@@ -124,10 +135,8 @@ export function handleCellClick(r: number, c: number) {
     const sc = gameState.selectedCell.c
     gameState.selectedCell = null
 
-    // Click same cell = deselect
     if (sr === r && sc === c) return
 
-    // Click own piece = reselect
     const dstCell = gameState.grid[r]?.[c]
     if (dstCell && dstCell.player === gameState.myPlayer) {
       gameState.selectedCell = { r, c }
