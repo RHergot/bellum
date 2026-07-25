@@ -188,7 +188,10 @@ function drawPiece(x: number, y: number, cell: { player: number; piece: string |
   if (!ctx || !cell.piece) return
   const army = getArmy(cell.player)
   const piece = getPiece(army, cell.piece)
-  if (!piece) return
+  if (!piece) {
+    drawHiddenPiece(x, y, cell.player)
+    return
+  }
   const mode = gameState.displayMode
   if (mode === 'numbers') drawPieceNumbers(x, y, army, piece)
   else if (mode === 'colors') drawPieceColors(x, y, army, piece)
