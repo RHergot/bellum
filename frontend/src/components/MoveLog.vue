@@ -33,11 +33,11 @@ function formatMove(entry: typeof gameState.moveHistory[0]): string {
 }
 
 function entryClass(entry: typeof gameState.moveHistory[0]): string {
-  if (entry.type === 'error') return 'text-red-400'
-  if (entry.type === 'ai_move') return 'text-blue-400'
-  if (entry.type === 'game_over') return 'text-yellow-400 font-bold'
-  if (entry.type === 'game_start') return 'text-green-400'
-  return 'text-gray-300'
+  if (entry.type === 'error') return 'log-error'
+  if (entry.type === 'ai_move') return 'log-ai'
+  if (entry.type === 'game_over') return 'log-gameover'
+  if (entry.type === 'game_start') return 'log-start'
+  return 'log-default'
 }
 </script>
 
@@ -90,4 +90,9 @@ function entryClass(entry: typeof gameState.moveHistory[0]): string {
   color: #484f58;
   margin-right: 4px;
 }
+.log-error { color: #f85149; }
+.log-ai { color: #58a6ff; }
+.log-gameover { color: #d29922; font-weight: bold; }
+.log-start { color: #3fb950; }
+.log-default { color: #c9d1d9; }
 </style>

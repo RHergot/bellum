@@ -72,9 +72,44 @@ function drawWaterlooBackground() {
   }
 }
 
+const LAKES = new Set([
+  '4,2', '4,3', '5,2', '5,3', '4,6', '4,7', '5,6', '5,7'
+])
+function isLake(r: number, c: number): boolean { return LAKES.has(`${r},${c}`) }
+
+function drawLake(x: number, y: number) {
+  if (!ctx) return
+  const grad = ctx.createLinearGradient(x, y, x, y + CELL)
+  grad.addColorStop(0, '#1a3a5c')
+  grad.addColorStop(0.5, '#1e4d7a')
+  grad.addColorStop(1, '#163a58')
+  ctx.fillStyle = grad
+  ctx.fillRect(x, y, CELL, CELL)
+  // Wave pattern
+  ctx.strokeStyle = 'rgba(88,166,255,0.25)'
+  ctx.lineWidth = 1
+  for (let wy = 0; wy < 3; wy++) {
+    const baseY = y + CELL * 0.2 + wy * (CELL * 0.25)
+    ctx.beginPath()
+    for (let wx = 0; wx <= CELL; wx += 2) {
+      const sy = baseY + Math.sin((wx + wy * 10) * 0.3) * 2.5
+      if (wx === 0) ctx.moveTo(x + wx, sy)
+      else ctx.lineTo(x + wx, sy)
+    }
+    ctx.stroke()
+  }
+}
+
 function drawCell(row: number, col: number) {
   if (!ctx) return
   const { x, y } = cellXY(row, col)
+
+  // Draw lake cells and return early
+  if (isLake(row, col)) {
+    drawLake(x, y)
+    return
+  }
+
   const cell = gameState.grid[row]?.[col]
   if (!cell) return
 
@@ -98,7 +133,7 @@ function drawCell(row: number, col: number) {
     if (piece === 'scout') {
       for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
         let rr = sr + dr, cc = sc + dc
-        while (rr >= 0 && rr < 10 && cc >= 0 && cc < 10) {
+        while (rr >= 0 && rr < 10 && cc >= 0 && cc < 10 && !isLake(rr, cc)) {
           const tc = gameState.grid[rr]?.[cc]
           if (!tc || tc.player === gameState.myPlayer) break
           if (rr === row && cc === col) {
@@ -112,7 +147,7 @@ function drawCell(row: number, col: number) {
     } else {
       for (const [dr, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
         const nr = sr + dr, nc = sc + dc
-        if (nr === row && nc === col) {
+        if (nr === row && nc === col && !isLake(nr, nc)) {
           const tc = gameState.grid[nr]?.[nc]
           if (tc && tc.player !== gameState.myPlayer) {
             ctx.fillStyle = 'rgba(88,166,255,0.25)'

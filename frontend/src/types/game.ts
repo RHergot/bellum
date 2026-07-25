@@ -41,8 +41,17 @@ export type DisplayMode = 'numbers' | 'colors' | 'lissajous'
 export type GamePhase = 'placement' | 'battle'
 export type AIMode = 'vs_ai' | 'vs_human'
 
+export interface MoveHistoryEntry {
+  type: 'game_start' | 'select' | 'move' | 'ai_move' | 'error' | 'game_over'
+  gameId?: string
+  sr?: number; sc?: number; tr?: number; tc?: number
+  attacker?: string; defender?: string; result?: string
+  message?: string
+}
+
 export interface GameState {
   gameId: string | null
+  playerToken: string | null
   phase: GamePhase
   currentPlayer: number
   currentTurn: number
@@ -54,4 +63,6 @@ export interface GameState {
   displayMode: DisplayMode
   statusMessage: string
   remainingToPlace: Record<string, string[]>
+  myPlayer: number
+  moveHistory: MoveHistoryEntry[]
 }

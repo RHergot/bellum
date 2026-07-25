@@ -1,5 +1,5 @@
-import { ref, reactive } from 'vue'
-import type { Cell, GridState, GamePhase, AIMode, DisplayMode } from '../types/game'
+import { reactive } from 'vue'
+import type { Cell, GamePhase, AIMode, DisplayMode, MoveHistoryEntry } from '../types/game'
 import { getArmy, isMobile } from '../data/armies'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -7,6 +7,7 @@ const API_BASE = import.meta.env.VITE_API_URL || ''
 // Shared reactive state
 export const gameState = reactive({
   gameId: null as string | null,
+  playerToken: null as string | null,
   phase: 'battle' as GamePhase,
   currentPlayer: 1,
   currentTurn: 1,
@@ -19,25 +20,8 @@ export const gameState = reactive({
   statusMessage: 'Cliquez sur « Nouvelle Partie » pour commencer.',
   remainingToPlace: {} as Record<string, string[]>,
   myPlayer: 1,
-  moveHistory: [] as Array<{
-    type: 'game_start' | 'select' | 'move' | 'ai_move' | 'error' | 'game_over'
-    gameId?: string
-    sr?: number; sc?: number; tr?: number; tc?: number
-    attacker?: string; defender?: string; result?: string
-    message?: string
-  }>,
+  moveHistory: [] as MoveHistoryEntry[],
 })
-
-function emptyGrid(): Cell[][] {
-  const g: Cell[][] = []
-  for (let r = 0; r < 10; r++) {
-    g[r] = []
-    for (let c = 0; c < 10; c++) {
-      g[r][c] = { player: 0, piece: null, revealed: false }
-    }
-  }
-  return g
-}
 
 export async function startNewGame() {
   try {
@@ -48,6 +32,7 @@ export async function startNewGame() {
       return
     }
     gameState.gameId = data.game_id
+    gameState.playerToken = data.player_token
     gameState.currentTurn = data.current_turn || 1
     gameState.grid = data.state.grid
     gameState.gameOver = data.state.game_over
@@ -64,9 +49,11 @@ export async function startNewGame() {
 }
 
 export async function fetchState() {
-  if (!gameState.gameId) return
+  if (!gameState.gameId || !gameState.playerToken) return
   try {
-    const res = await fetch(`${API_BASE}/api/game/${gameState.gameId}/state/?player=${gameState.myPlayer}`)
+    const res = await fetch(
+      `${API_BASE}/api/game/${gameState.gameId}/state/?player_token=${encodeURIComponent(gameState.playerToken)}`
+    )
     const data = await res.json()
     if (data.error) return
     gameState.grid = data.grid
@@ -79,13 +66,16 @@ export async function fetchState() {
 }
 
 export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
-  if (!gameState.gameId || gameState.gameOver) return
+  if (!gameState.gameId || !gameState.playerToken || gameState.gameOver) return
 
   try {
     const res = await fetch(`${API_BASE}/api/game/${gameState.gameId}/move/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sr, sc, tr, tc, player: gameState.myPlayer })
+      body: JSON.stringify({
+        sr, sc, tr, tc,
+        player_token: gameState.playerToken
+      })
     })
     const data = await res.json()
     if (data.error) {

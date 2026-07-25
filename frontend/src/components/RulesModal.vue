@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ROMANS, NAPOLEON } from '../data/armies'
 
 const show = ref(false)
 

@@ -9,7 +9,9 @@ module.exports = {
       autorestart: true,
       max_memory_restart: '512M',
       env: {
-        DJANGO_SECRET_KEY: 'change-me-in-production',
+        // SECURITY: Generate a real secret before deploying!
+        // python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+        DJANGO_SECRET_KEY: process.env.DJANGO_SECRET_KEY || 'CHANGE_ME_BEFORE_DEPLOY',
         DJANGO_DEBUG: 'False',
         DJANGO_ALLOWED_HOSTS: 'bellum.rhesoftware.com,localhost,127.0.0.1',
         PYTHONUNBUFFERED: '1'
