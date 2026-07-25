@@ -21,6 +21,8 @@ export const gameState = reactive({
   remainingToPlace: {} as Record<string, string[]>,
   myPlayer: 1,
   moveHistory: [] as MoveHistoryEntry[],
+  lastMove: null as { sr: number; sc: number; tr: number; tc: number } | null,
+  lastAIMove: null as { sr: number; sc: number; tr: number; tc: number } | null,
 })
 
 export async function startNewGame() {
@@ -40,6 +42,8 @@ export async function startNewGame() {
     gameState.phase = 'battle'
     gameState.currentPlayer = 1
     gameState.selectedCell = null
+    gameState.lastMove = null
+    gameState.lastAIMove = null
     gameState.moveHistory = [{ type: 'game_start', gameId: data.game_id }]
     gameState.statusMessage = `Partie ${data.game_id} — À vous de jouer (⚔️ Romains).`
   } catch (err) {
@@ -81,7 +85,6 @@ export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
     if (data.error) {
       const msg = data.error
       gameState.moveHistory.push({ type: 'error', message: msg, sr, sc, tr, tc })
-      // Friendlier messages for immobile pieces
       if (msg.includes('cannot move')) {
         gameState.statusMessage = `⛔ Cette pièce ne peut pas se déplacer (${msg}).`
       } else if (msg.includes('Not your turn')) {
@@ -91,6 +94,9 @@ export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
       }
       return
     }
+
+    // Set player's last move
+    gameState.lastMove = { sr, sc, tr, tc }
 
     // Log successful move
     const srcCell = gameState.grid[sr]?.[sc]
@@ -110,16 +116,24 @@ export async function makeMove(sr: number, sc: number, tr: number, tc: number) {
     gameState.winner = data.state.winner
     gameState.currentTurn = data.current_turn || 1
 
-    // Log AI move if present
+    // Process and log AI move if present
     if (data.ai_move) {
       const [aiSrc, aiDst] = data.ai_move
-      gameState.moveHistory.push({ type: 'ai_move', sr: aiSrc[0], sc: aiSrc[1], tr: aiDst[0], tc: aiDst[1] })
+      const [asr, asc] = aiSrc
+      const [atr, atc] = aiDst
+      gameState.lastAIMove = { sr: asr, sc: asc, tr: atr, tc: atc }
+      gameState.moveHistory.push({ type: 'ai_move', sr: asr, sc: asc, tr: atr, tc: atc })
+    } else {
+      gameState.lastAIMove = null
     }
 
     if (gameState.gameOver) {
       const wname = gameState.winner === 1 ? '⚔️ Romains' : '🎩 Napoléon'
       gameState.moveHistory.push({ type: 'game_over', message: `Victoire — ${wname}` })
       gameState.statusMessage = `🏆 Victoire — ${wname} !`
+    } else if (data.ai_move) {
+      const [aiSrc, aiDst] = data.ai_move
+      gameState.statusMessage = `🎩 Napoléon a joué (${aiSrc[0]},${aiSrc[1]}) ➔ (${aiDst[0]},${aiDst[1]}). À vous !`
     } else {
       gameState.statusMessage = 'Coup joué. À vous !'
     }

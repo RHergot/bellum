@@ -158,6 +158,37 @@ function drawCell(row: number, col: number) {
     }
   }
 
+  // Last move highlights (Player & AI)
+  if (gameState.lastAIMove) {
+    const { sr: asr, sc: asc, tr: atr, tc: atc } = gameState.lastAIMove
+    if (row === asr && col === asc) {
+      // AI source square (where enemy moved FROM)
+      ctx.fillStyle = 'rgba(248, 81, 73, 0.2)'
+      ctx.fillRect(x, y, CELL, CELL)
+      ctx.strokeStyle = '#f85149'
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([3, 3])
+      ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4)
+      ctx.setLineDash([])
+    } else if (row === atr && col === atc) {
+      // AI target square (where enemy moved TO)
+      ctx.fillStyle = 'rgba(248, 81, 73, 0.3)'
+      ctx.fillRect(x, y, CELL, CELL)
+      ctx.strokeStyle = '#f85149'
+      ctx.lineWidth = 2.5
+      ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2)
+    }
+  }
+
+  if (gameState.lastMove) {
+    const { tr: ptr, tc: ptc } = gameState.lastMove
+    if (row === ptr && col === ptc) {
+      ctx.strokeStyle = '#2ea043'
+      ctx.lineWidth = 2
+      ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4)
+    }
+  }
+
   // Selected cell highlight
   if (gameState.selectedCell?.r === row && gameState.selectedCell?.c === col) {
     ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3
@@ -188,10 +219,7 @@ function drawPiece(x: number, y: number, cell: { player: number; piece: string |
   if (!ctx || !cell.piece) return
   const army = getArmy(cell.player)
   const piece = getPiece(army, cell.piece)
-  if (!piece) {
-    drawHiddenPiece(x, y, cell.player)
-    return
-  }
+  if (!piece) return
   const mode = gameState.displayMode
   if (mode === 'numbers') drawPieceNumbers(x, y, army, piece)
   else if (mode === 'colors') drawPieceColors(x, y, army, piece)
@@ -280,7 +308,7 @@ function onContextMenu(ev: MouseEvent) {
 
 // Watch gameState for changes → redraw only when needed (no 60fps loop!)
 watch(
-  () => [gameState.grid, gameState.selectedCell, gameState.displayMode, gameState.gameOver],
+  () => [gameState.grid, gameState.selectedCell, gameState.displayMode, gameState.gameOver, gameState.lastMove, gameState.lastAIMove],
   () => draw(),
   { deep: true }
 )

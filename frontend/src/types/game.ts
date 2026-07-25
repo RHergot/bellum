@@ -65,4 +65,6 @@ export interface GameState {
   remainingToPlace: Record<string, string[]>
   myPlayer: number
   moveHistory: MoveHistoryEntry[]
+  lastMove: { sr: number; sc: number; tr: number; tc: number } | null
+  lastAIMove: { sr: number; sc: number; tr: number; tc: number } | null
 }
