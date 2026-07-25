@@ -18,6 +18,7 @@ PIECES_CONFIG = [
 
 BOARD_SIZE = 10
 LAKES = [(4, 2), (4, 3), (5, 2), (5, 3), (4, 6), (4, 7), (5, 6), (5, 7)]
+IMMOBILE_PIECES = ('flag', 'bomb')
 
 def create_army_pieces():
     pieces = []
@@ -33,6 +34,7 @@ class StrategoBoard:
         self.grid = [[{'player': 0, 'piece': None, 'revealed': False} for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
         self.game_over = False
         self.winner = None
+        self.current_turn = 1
 
     def is_lake(self, r, c):
         return (r, c) in LAKES
@@ -71,6 +73,24 @@ class StrategoBoard:
             if p['key'] == piece_key:
                 return p['rank']
         return 0
+
+    def has_mobile_pieces(self, player):
+        """Return True if the given player has at least one mobile piece on the board."""
+        for r in range(BOARD_SIZE):
+            for c in range(BOARD_SIZE):
+                cell = self.grid[r][c]
+                if cell['player'] == player and cell['piece'] is not None and cell['piece'] not in IMMOBILE_PIECES:
+                    return True
+        return False
+
+    def check_immobilization_victory(self):
+        """Check if either player has no mobile pieces left and set game_over accordingly."""
+        for player in (1, 2):
+            if not self.has_mobile_pieces(player):
+                self.game_over = True
+                self.winner = 3 - player  # the other player wins
+                return True
+        return False
 
     def to_dict(self, for_player=None):
         # Returns grid view, masking enemy unrevealed pieces if for_player is specified
