@@ -21,6 +21,15 @@ const rulesModalRef = ref<InstanceType<typeof RulesModal> | null>(null)
 function handleModeSelect(mode: 'random' | 'manual') {
   startPlacement(mode)
 }
+
+function goToModeSelect() {
+  // Reset to placement phase — show mode selector
+  cancelPlacement()
+  pool.value = []
+  grid.value = []
+  inHand.value = null
+  gameState.phase = 'placement'
+}
 </script>
 
 <template>
@@ -80,7 +89,7 @@ function handleModeSelect(mode: 'random' | 'manual') {
           <div class="controls-bar">
             <ModeSwitch />
             <div class="btn-bar">
-              <button class="btn primary" @click="startNewGame">🔄 Nouvelle Partie</button>
+              <button class="btn primary" @click="goToModeSelect">🔄 Nouvelle Partie</button>
               <button class="btn" @click="rulesModalRef?.open()">📖 Règles</button>
             </div>
           </div>
