@@ -40,6 +40,33 @@ export interface Army {
 export type DisplayMode = 'numbers' | 'colors' | 'lissajous'
 export type GamePhase = 'placement' | 'battle'
 export type AIMode = 'vs_ai' | 'vs_human'
+export type PlacementMode = 'random' | 'manual'
+
+export interface PieceCount {
+  key: string
+  name: string
+  rank: number
+  emoji: string
+  remaining: number
+}
+
+export interface GridPiece {
+  r: number
+  c: number
+  piece: string
+}
+
+export interface InHandPiece {
+  key: string
+  source: 'pool' | { r: number; c: number }
+}
+
+export interface PlacementState {
+  mode: PlacementMode
+  piecesInPool: PieceCount[]
+  piecesOnGrid: GridPiece[]
+  inHand: InHandPiece | null
+}
 
 export interface MoveHistoryEntry {
   type: 'game_start' | 'select' | 'move' | 'ai_move' | 'error' | 'game_over'

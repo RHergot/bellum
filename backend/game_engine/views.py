@@ -4,7 +4,7 @@ from rest_framework import status
 import uuid
 import os
 from datetime import datetime, timedelta
-from .stratego_logic import StrategoBoard, create_army_pieces, BOARD_SIZE, LAKES
+from .stratego_logic import StrategoBoard, create_army_pieces, _validate_manual_placement, BOARD_SIZE, LAKES
 from .ismcts import HeuristicAI, get_legal_moves, execute_move
 
 # ──────────────────────────────────────────────
@@ -100,24 +100,58 @@ class NewGameAPIView(APIView):
         game_id = str(uuid.uuid4())[:8]
         player_token = str(uuid.uuid4())
         board = StrategoBoard()
+        placement_mode = request.data.get('placement_mode', 'random')
 
-        # Auto-place Player 1 (Bottom 4 rows: rows 6 to 9)
-        p1_pieces = create_army_pieces()
-        idx = 0
-        for r in range(6, BOARD_SIZE):
-            for c in range(BOARD_SIZE):
-                if idx < len(p1_pieces):
-                    board.grid[r][c] = {'player': 1, 'piece': p1_pieces[idx], 'revealed': False}
-                    idx += 1
+        if placement_mode == 'random':
+            # Auto-place Player 1 (Bottom 4 rows: rows 6 to 9)
+            p1_pieces = create_army_pieces()
+            idx = 0
+            for r in range(6, BOARD_SIZE):
+                for c in range(BOARD_SIZE):
+                    if idx < len(p1_pieces):
+                        board.grid[r][c] = {'player': 1, 'piece': p1_pieces[idx], 'revealed': False}
+                        idx += 1
 
-        # Auto-place AI Player 2 (Top 4 rows: rows 0 to 3)
-        p2_pieces = create_army_pieces()
-        idx = 0
-        for r in range(0, 4):
-            for c in range(BOARD_SIZE):
-                if idx < len(p2_pieces):
-                    board.grid[r][c] = {'player': 2, 'piece': p2_pieces[idx], 'revealed': False}
-                    idx += 1
+            # Auto-place AI Player 2 (Top 4 rows: rows 0 to 3)
+            p2_pieces = create_army_pieces()
+            idx = 0
+            for r in range(0, 4):
+                for c in range(BOARD_SIZE):
+                    if idx < len(p2_pieces):
+                        board.grid[r][c] = {'player': 2, 'piece': p2_pieces[idx], 'revealed': False}
+                        idx += 1
+
+        elif placement_mode == 'manual':
+            manual_placement = request.data.get('manual_placement')
+            if not manual_placement or not isinstance(manual_placement, list):
+                return Response(
+                    {'error': 'Missing or invalid manual_placement (must be a list of {r, c, piece})'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            is_valid, error_msg = _validate_manual_placement(manual_placement, player=1)
+            if not is_valid:
+                return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Place Player 1 pieces from manual placement
+            for entry in manual_placement:
+                r, c, piece = entry['r'], entry['c'], entry['piece']
+                board.grid[r][c] = {'player': 1, 'piece': piece, 'revealed': False}
+
+            # Auto-place AI Player 2 (Top 4 rows: rows 0 to 3)
+            p2_pieces = create_army_pieces()
+            idx = 0
+            for r in range(0, 4):
+                for c in range(BOARD_SIZE):
+                    if idx < len(p2_pieces):
+                        board.grid[r][c] = {'player': 2, 'piece': p2_pieces[idx], 'revealed': False}
+                        idx += 1
+
+        else:
+            return Response(
+                {'error': f"Unknown placement_mode '{placement_mode}' (use 'random' or 'manual')"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         board.current_turn = 1  # Player 1 starts
 

@@ -5,9 +5,22 @@ import Sidebar from './components/Sidebar.vue'
 import ModeSwitch from './components/ModeSwitch.vue'
 import RulesModal from './components/RulesModal.vue'
 import MoveLog from './components/MoveLog.vue'
+import PlacementModeSelector from './components/PlacementModeSelector.vue'
+import PlacementGrid from './components/PlacementGrid.vue'
+import PiecePalette from './components/PiecePalette.vue'
 import { gameState, startNewGame } from './composables/useGame'
+import {
+  pool, grid, inHand, placedCount, canConfirm,
+  startPlacement, cancelPlacement, confirmPlacement,
+  pickFromPool, pickFromGrid, placeOnCell, returnToPool,
+  clearAll,
+} from './composables/usePlacement'
 
 const rulesModalRef = ref<InstanceType<typeof RulesModal> | null>(null)
+
+function handleModeSelect(mode: 'random' | 'manual') {
+  startPlacement(mode)
+}
 </script>
 
 <template>
@@ -20,22 +33,62 @@ const rulesModalRef = ref<InstanceType<typeof RulesModal> | null>(null)
       <span class="status">{{ gameState.statusMessage }}</span>
     </header>
 
-    <div class="layout">
-      <Sidebar side="left" :player="1" />
-      <div class="board-area">
-        <GameCanvas />
-        <div class="controls-bar">
-          <ModeSwitch />
-          <div class="btn-bar">
-            <button class="btn primary" @click="startNewGame">🔄 Nouvelle Partie</button>
-            <button class="btn" @click="rulesModalRef?.open()">📖 Règles</button>
+    <!-- PHASE: Mode Selection -->
+    <template v-if="gameState.phase === 'placement' && pool.length === 0 && grid.length === 0 && !inHand">
+      <PlacementModeSelector @select="handleModeSelect" />
+    </template>
+
+    <!-- PHASE: Manual Placement -->
+    <template v-else-if="gameState.phase === 'placement'">
+      <div class="placement-layout">
+        <PlacementGrid
+          :pieces="grid"
+          :in-hand="inHand"
+          :placed-count="placedCount"
+          @pick="pickFromGrid"
+          @place="placeOnCell"
+          @return-to-pool="returnToPool"
+        />
+        <div class="placement-sidebar">
+          <PiecePalette
+            :pool="pool"
+            :in-hand="inHand"
+            @pick="pickFromPool"
+          />
+          <div class="placement-actions">
+            <span class="counter">{{ placedCount }} / 40</span>
+            <button class="btn" @click="clearAll">🗑️ Vider</button>
+            <button
+              class="btn primary"
+              :disabled="!canConfirm"
+              @click="confirmPlacement"
+            >
+              ✅ Confirmer
+            </button>
+            <button class="btn" @click="cancelPlacement">✖ Annuler</button>
           </div>
         </div>
-
-        <MoveLog />
       </div>
-      <Sidebar side="right" :player="2" />
-    </div>
+    </template>
+
+    <!-- PHASE: Battle (normal game) -->
+    <template v-else>
+      <div class="layout">
+        <Sidebar side="left" :player="1" />
+        <div class="board-area">
+          <GameCanvas />
+          <div class="controls-bar">
+            <ModeSwitch />
+            <div class="btn-bar">
+              <button class="btn primary" @click="startNewGame">🔄 Nouvelle Partie</button>
+              <button class="btn" @click="rulesModalRef?.open()">📖 Règles</button>
+            </div>
+          </div>
+          <MoveLog />
+        </div>
+        <Sidebar side="right" :player="2" />
+      </div>
+    </template>
 
     <RulesModal ref="rulesModalRef" />
   </div>
@@ -95,6 +148,32 @@ header h1 {
   flex-shrink: 0;
 }
 
+/* ===== PLACEMENT LAYOUT ===== */
+.placement-layout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.placement-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 200px;
+}
+.placement-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.counter {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #3fb950;
+  padding: 4px;
+}
+
 /* ===== CANVAS ===== */
 canvas {
   border: 2px solid #30363d;
@@ -131,8 +210,10 @@ canvas {
   width: 100%;
 }
 .btn:hover { background: #30363d; }
+.btn:disabled { opacity: 0.4; cursor: default; }
 .btn.primary { background: #238636; border-color: #2ea043; color: #fff; }
 .btn.primary:hover { background: #2ea043; }
+.btn.primary:disabled { background: #1a5a28; border-color: #1a5a28; }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1000px) {
@@ -140,5 +221,6 @@ canvas {
 }
 @media (max-width: 780px) {
   .layout { flex-direction: column; align-items: center; }
+  .placement-layout { flex-direction: column; align-items: center; }
 }
 </style>

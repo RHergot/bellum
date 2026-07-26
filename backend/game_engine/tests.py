@@ -285,3 +285,140 @@ class TestAPIViews:
         # Next game should fail
         response = self.client.post('/api/game/new/')
         assert response.status_code == 503
+
+    def _valid_manual_placement(self):
+        """Return a valid manual placement for Player 1 (rows 6-9)."""
+        from game_engine.stratego_logic import PIECES_CONFIG
+        all_pieces = []
+        for p in PIECES_CONFIG:
+            for _ in range(p['count']):
+                all_pieces.append(p['key'])
+        placement = []
+        idx = 0
+        for r in range(6, 10):
+            for c in range(10):
+                placement.append({'r': r, 'c': c, 'piece': all_pieces[idx]})
+                idx += 1
+        return placement
+
+    def test_new_game_with_manual_placement(self):
+        placement = self._valid_manual_placement()
+        response = self.client.post('/api/game/new/', {
+            'placement_mode': 'manual',
+            'manual_placement': placement,
+        }, format='json')
+        assert response.status_code == 200
+        assert 'game_id' in response.data
+        assert 'player_token' in response.data
+        # Verify P1 grid has the manually placed pieces
+        state = response.data['state']
+        grid = state['grid']
+        # Check that a specific piece is where we placed it
+        assert grid[6][0]['piece'] == placement[0]['piece']
+
+    def test_new_game_manual_invalid_rejected(self):
+        placement = self._valid_manual_placement()
+        placement.pop()  # 39 pieces — invalid
+        response = self.client.post('/api/game/new/', {
+            'placement_mode': 'manual',
+            'manual_placement': placement,
+        }, format='json')
+        assert response.status_code == 400
+        assert 'error' in response.data
+
+    def test_new_game_default_random_still_works(self):
+        response = self.client.post('/api/game/new/')  # no placement_mode → default random
+        assert response.status_code == 200
+        assert response.data['current_turn'] == 1
+
+    def test_new_game_unknown_mode_rejected(self):
+        response = self.client.post('/api/game/new/', {
+            'placement_mode': 'telepathy',
+        }, format='json')
+        assert response.status_code == 400
+
+
+# ─── Manual placement validation ─────────────────────────────
+
+class TestValidateManualPlacement:
+    """Tests for _validate_manual_placement(placement, player)."""
+
+    def _make_placement(self, player=1):
+        """Build a valid placement list for the given player."""
+        from game_engine.stratego_logic import PIECES_CONFIG
+        all_pieces = []
+        for p in PIECES_CONFIG:
+            for _ in range(p['count']):
+                all_pieces.append(p['key'])
+        start_row = 6 if player == 1 else 0
+        placement = []
+        idx = 0
+        for r in range(start_row, start_row + 4):
+            for c in range(10):
+                placement.append({'r': r, 'c': c, 'piece': all_pieces[idx]})
+                idx += 1
+        return placement
+
+    def test_valid_placement_is_accepted(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=1)
+        is_valid, error = _validate_manual_placement(placement, player=1)
+        assert is_valid is True
+        assert error is None
+
+    def test_wrong_number_of_pieces_rejected(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=1)
+        placement.pop()  # 39 pieces
+        is_valid, error = _validate_manual_placement(placement, player=1)
+        assert is_valid is False
+        assert '40' in error or 'Expected' in error or 'pièce' in error.lower()
+
+    def test_outside_deployment_zone_rejected(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=1)
+        placement[0] = {'r': 5, 'c': 0, 'piece': 'marshal'}  # outside rows 6-9
+        is_valid, error = _validate_manual_placement(placement, player=1)
+        assert is_valid is False
+        assert 'zone' in error.lower() or 'rangée' in error.lower() or 'row' in error.lower()
+
+    def test_duplicate_coordinates_rejected(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=1)
+        placement[1] = {'r': placement[0]['r'], 'c': placement[0]['c'], 'piece': 'general'}
+        is_valid, error = _validate_manual_placement(placement, player=1)
+        assert is_valid is False
+        assert 'doublon' in error.lower() or 'duplicate' in error.lower() or 'même' in error.lower()
+
+    def test_wrong_piece_quantities_rejected(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=1)
+        # Replace all scouts with captains (should be 8 scouts, 4 captains)
+        for p in placement:
+            if p['piece'] == 'scout':
+                p['piece'] = 'captain'
+        is_valid, error = _validate_manual_placement(placement, player=1)
+        assert is_valid is False
+        assert 'quantité' in error.lower() or 'count' in error.lower() or 'captain' in error.lower()
+
+    def test_unknown_piece_key_rejected(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=1)
+        placement[0] = {'r': 6, 'c': 0, 'piece': 'dragon'}
+        is_valid, error = _validate_manual_placement(placement, player=1)
+        assert is_valid is False
+
+    def test_p2_deployment_zone_is_rows_0_to_3(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=2)
+        is_valid, error = _validate_manual_placement(placement, player=2)
+        assert is_valid is True
+        assert error is None
+
+    def test_p1_in_p2_zone_rejected(self):
+        from game_engine.stratego_logic import _validate_manual_placement
+        placement = self._make_placement(player=1)
+        # Move first piece to P2 zone (row 0)
+        placement[0] = {'r': 0, 'c': 0, 'piece': 'marshal'}
+        is_valid, error = _validate_manual_placement(placement, player=1)
+        assert is_valid is False

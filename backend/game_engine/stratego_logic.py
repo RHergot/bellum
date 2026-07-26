@@ -28,6 +28,73 @@ def create_army_pieces():
     random.shuffle(pieces)
     return pieces
 
+
+def _validate_manual_placement(placement, player):
+    """
+    Validate a manual piece placement for the given player.
+    
+    Args:
+        placement: list of dicts [{'r': int, 'c': int, 'piece': str}, ...]
+        player: 1 or 2
+    
+    Returns:
+        (is_valid: bool, error_message: str or None)
+        
+    Rules:
+        - Exactly 40 pieces
+        - All coordinates in [0, BOARD_SIZE-1]
+        - All in player's deployment zone (rows 6-9 for P1, 0-3 for P2)
+        - No lakes
+        - No duplicate coordinates
+        - Valid piece keys
+        - Correct quantities per type
+    """
+    if len(placement) != 40:
+        return False, f'Expected 40 pièces, got {len(placement)}'
+
+    # Build expected piece counts
+    expected_counts = {p['key']: p['count'] for p in PIECES_CONFIG}
+    seen_counts = {p['key']: 0 for p in PIECES_CONFIG}
+    seen_coords = set()
+
+    min_row = 6 if player == 1 else 0
+    max_row = 9 if player == 1 else 3
+
+    for entry in placement:
+        r, c, piece = entry['r'], entry['c'], entry['piece']
+
+        # Coordinate validation
+        if not (0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE):
+            return False, f'Coordonnées hors grille : ({r},{c})'
+
+        # Deployment zone
+        if not (min_row <= r <= max_row):
+            return False, f'Pièce hors zone de déploiement (rangées {min_row}-{max_row}) : ({r},{c})'
+
+        # Lakes
+        if (r, c) in LAKES:
+            return False, f'Pièce sur un lac : ({r},{c})'
+
+        # Duplicate coordinates
+        coord = (r, c)
+        if coord in seen_coords:
+            return False, f'Coordonnées en doublon : ({r},{c})'
+        seen_coords.add(coord)
+
+        # Valid piece key
+        if piece not in expected_counts:
+            return False, f'Pièce inconnue : {piece}'
+
+        # Track counts
+        seen_counts[piece] += 1
+
+    # Quantity validation
+    for key, expected in expected_counts.items():
+        if seen_counts[key] != expected:
+            return False, f'Quantité incorrecte pour {key} : attendu {expected}, reçu {seen_counts[key]}'
+
+    return True, None
+
 class StrategoBoard:
     def __init__(self):
         # 10x10 grid. Each cell: {'player': 0/1/2, 'piece': key or None, 'revealed': bool}
